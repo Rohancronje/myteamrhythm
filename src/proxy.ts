@@ -7,7 +7,7 @@ import { canAccess } from "@/lib/auth/access";
 // session except: the login page + auth API, and the volunteer pulse check-in
 // (reached by a public link, no account needed). Role gating (member/leader can't
 // reach team-wide pastoral surfaces) is enforced here too.
-const PUBLIC = ["/login", "/api/auth", "/pulse", "/api/pulse"];
+const PUBLIC = ["/login", "/api/auth", "/pulse", "/api/pulse", "/api/webhooks", "/api/cron"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

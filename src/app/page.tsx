@@ -5,6 +5,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { HomeScreen, type Story, type TeamCard } from "@/components/HomeScreen";
 import { getTeam, getTeamInfo, getFlagged, getTeamGroups } from "@/lib/data/team";
 import { getSession } from "@/lib/auth/server";
+import { nzHour } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function Home() {
     status: g.status,
   }));
 
-  const hour = new Date().getHours();
+  const hour = nzHour();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (

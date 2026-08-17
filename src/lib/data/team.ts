@@ -63,7 +63,8 @@ async function build() {
     return { members: [], all: [], info: { source: "none", org: "NS Family Services", generatedAt: null } as TeamInfo };
   }
 
-  const now = new Date(); // real current date (handover rule 5)
+  const { nzNowAnchor } = await import("@/lib/time");
+  const now = nzNowAnchor(); // real current date, anchored to NZ (handover rule 5)
   const all = snap.people.map((p): TeamMember => ({
     id: p.pcoId,
     name: p.name,

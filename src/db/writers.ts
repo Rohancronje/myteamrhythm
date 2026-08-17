@@ -15,6 +15,22 @@ export interface UpcomingRow {
   data: unknown; // { times, roster, songs }
 }
 
+/** Upsert a single upcoming service (used by the webhook for one changed plan). */
+export async function writeOneUpcoming(row: UpcomingRow) {
+  await getDb()
+    .insert(upcomingServices)
+    .values(row)
+    .onConflictDoUpdate({
+      target: upcomingServices.planId,
+      set: { serviceDate: row.serviceDate, serviceType: row.serviceType, title: row.title, seriesTitle: row.seriesTitle, data: row.data },
+    });
+}
+
+/** Remove an upcoming service (plan destroyed / moved to past). */
+export async function deleteUpcoming(planId: string) {
+  await getDb().delete(upcomingServices).where(inArray(upcomingServices.planId, [planId]));
+}
+
 /** Replace the whole upcoming window (small, forward-looking set). */
 export async function writeUpcoming(rows: UpcomingRow[], meta?: unknown) {
   const db = getDb();

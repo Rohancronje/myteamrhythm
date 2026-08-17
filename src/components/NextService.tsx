@@ -2,6 +2,7 @@
 // order + keys, and the roster ("who else is serving") all from Planning Center.
 
 import { serviceLabel, type UpcomingService } from "@/lib/data/upcoming";
+import { daysFromToday } from "@/lib/time";
 
 const TZ = "Pacific/Auckland"; // NS Family Services is in NZ
 
@@ -18,11 +19,7 @@ function fmtTime(startsAt: string): string {
     .toLowerCase();
 }
 function countdown(dateISO: string): string {
-  const today = new Date();
-  const t0 = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const s = new Date(dateISO + "T00:00:00Z");
-  const t1 = Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate());
-  const days = Math.round((t1 - t0) / 86400000);
+  const days = daysFromToday(dateISO);
   if (days <= 0) return "Today";
   if (days === 1) return "Tomorrow";
   return `In ${days} days`;

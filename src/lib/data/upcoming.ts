@@ -65,9 +65,10 @@ export function serviceLabel(k: string): string {
   return SERVICE_LABEL[k] ?? k;
 }
 
-/** All upcoming services, soonest first (today onward). */
+/** All upcoming services, soonest first (today onward, NZ). */
 export async function getUpcoming(): Promise<UpcomingService[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const { nzToday } = await import("@/lib/time");
+  const today = nzToday();
   return (await load()).filter((s) => s.date >= today).sort((a, b) => a.date.localeCompare(b.date));
 }
 
