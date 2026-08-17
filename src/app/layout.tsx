@@ -1,28 +1,26 @@
 import type { Metadata } from "next";
-import { Fraunces, Hanken_Grotesk } from "next/font/google";
+import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space",
   subsets: ["latin"],
-  axes: ["opsz", "SOFT"],
 });
-
-const hanken = Hanken_Grotesk({
-  variable: "--font-hanken",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Rhythm — serving load & team wellbeing",
+  title: "Rhythm — pastoral care for serving teams",
   description:
-    "A stats and insight platform for worship and volunteer teams. Tracks serving load, predicts burnout before it happens, and measures team wellbeing — not just attendance.",
+    "Catches volunteer burnout before it becomes a resignation. Serving load and team wellbeing for NS Family Services, built on Planning Center.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${hanken.variable} h-full`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} h-full`}>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

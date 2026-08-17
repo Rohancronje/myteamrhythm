@@ -177,6 +177,7 @@ export class PcoClient {
       team: string;
       serviceType: ServiceTypeKey;
       date: string;
+      planId: string;
       status: ScheduleStatus;
       position: string;
     }[] = [];
@@ -194,6 +195,7 @@ export class PcoClient {
             team: m.team,
             serviceType: key,
             date: plan.date,
+            planId: plan.id,
             status: m.status,
             position: m.position,
           });

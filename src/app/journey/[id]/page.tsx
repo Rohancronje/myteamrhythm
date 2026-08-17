@@ -1,140 +1,98 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
-import { RhythmLine } from "@/components/RhythmLine";
-import { getTeamPerson } from "@/lib/data/source";
-import { assessRisk } from "@/lib/rhythm/insights";
-import { RISK_META } from "@/lib/rhythm/presentation";
-import { ZONE_META } from "@/lib/rhythm/presentation";
+import { BottomNav } from "@/components/BottomNav";
+import { DotCalendar } from "@/components/DotCalendar";
+import { getMember } from "@/lib/data/team";
+import { STATUS_META } from "@/lib/rhythm/status";
 
 export const dynamic = "force-dynamic";
 
-// A person's own serving journey — the same data returned to the person it
-// belongs to. Reached by the volunteer, or by a pastoral lead who has unlocked
-// them after a threshold. A mirror, not a microscope.
+// Individual pastoral profile (handover: rhythm_person_pastoral). Real name, plain
+// language, dot-calendar rhythm — no charts. Care notes and pulse start empty and
+// honest; they're filled from real conversations, never pre-populated.
 
-export default async function JourneyPage({ params }: PageProps<"/journey/[id]">) {
+export default async function PersonPage({ params }: PageProps<"/journey/[id]">) {
   const { id } = await params;
-  const p = getTeamPerson(id);
-  if (!p) notFound();
+  const m = getMember(id);
+  if (!m) notFound();
 
-  const { person, rhythm, trend } = p;
-  const zone = ZONE_META[rhythm.zone];
-  const risk = assessRisk(p);
-  const meta = RISK_META[risk.level];
-  const totalServes = p.events.filter((e) => e.status === "confirmed").length;
+  const a = m.assessment;
+  const meta = STATUS_META[a.status];
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-5 pb-16 pt-6 sm:px-8">
-      <div className="rise flex items-center justify-between">
-        <Link href="/" className="text-sm text-ink-soft transition-colors hover:text-ink">
-          ← Team
-        </Link>
+    <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
+      <header className="rise mb-6 flex items-center justify-between">
+        <Link href="/" className="text-sm text-mute transition-colors hover:text-text">← Home</Link>
         <Wordmark />
-      </div>
+      </header>
 
-      {/* Hero */}
-      <header className="rise mt-6 card p-6 sm:p-8" style={{ animationDelay: "40ms" }}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Identity */}
+      <section className="rise glass rounded-[var(--radius-card)] p-6">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-4">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-2xl font-display text-xl text-white"
-              style={{ background: zone.color }}
-            >
-              {person.initials}
-            </div>
+            <span className="flex h-16 w-16 items-center justify-center rounded-full p-[2.5px]" style={{ background: meta.ring }}>
+              <span className="flex h-full w-full items-center justify-center rounded-full bg-surface-solid font-display text-lg font-bold">{m.initials}</span>
+            </span>
             <div>
-              <h1 className="font-display text-3xl text-ink">{person.name}</h1>
-              <p className="text-sm text-ink-soft">
-                {person.team} · {person.role}
-              </p>
+              <h1 className="font-display text-2xl font-bold text-text">{m.name}</h1>
+              <p className="text-sm text-mute">{m.team} · {m.role}</p>
             </div>
           </div>
-          <span
-            className="rounded-full px-3 py-1.5 text-sm font-semibold"
-            style={{ color: meta.color, background: meta.bg }}
-          >
-            {meta.label} risk
+          <span className="rounded-full px-3 py-1.5 text-sm font-semibold" style={{ color: meta.color, background: meta.soft }}>
+            {meta.label}
           </span>
         </div>
 
-        <div className="mt-6">
-          <div className="mb-2 flex items-center justify-between text-xs text-ink-faint">
-            <span>Serving rhythm · last 26 weeks</span>
-            <span>{zone.label}</span>
-          </div>
-          <RhythmLine series={rhythm.series} color={zone.color} width={760} height={130} animate />
+        {a.reason && <p className="mt-5 text-[15px] leading-relaxed text-text text-balance">{a.reason}.</p>}
+      </section>
+
+      {/* Plain-language stats */}
+      <section className="rise mt-4 grid grid-cols-3 gap-3" style={{ animationDelay: "60ms" }}>
+        <Stat label="This window" value={`${a.totalServices}`} sub="services" />
+        <Stat
+          label="Current streak"
+          value={a.streakWeeks > 0 ? `${a.streakWeeks}` : "—"}
+          sub={a.streakWeeks > 0 ? "weeks in a row" : "on a break"}
+        />
+        <Stat label="This week" value={`${a.servicesThisWeek}`} sub={a.servicesThisWeek === 1 ? "service" : "services"} />
+      </section>
+
+      {/* Dot-calendar */}
+      <section className="rise mt-4 glass rounded-[var(--radius-card)] p-6" style={{ animationDelay: "100ms" }}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-text">Serving rhythm</h2>
+          <span className="text-xs text-faint">last 26 weeks · each dot a week</span>
         </div>
-      </header>
-
-      {/* Stats */}
-      <section className="rise mt-4 grid gap-3 sm:grid-cols-3" style={{ animationDelay: "100ms" }}>
-        <Stat label="Times served" value={`${totalServes}`} sub="in this window" />
-        <Stat
-          label="Load vs. their normal"
-          value={rhythm.currentAcwr !== null ? `${rhythm.currentAcwr.toFixed(2)}×` : "—"}
-          sub={zone.blurb}
-        />
-        <Stat
-          label="Since last break"
-          value={rhythm.weeksSinceLastBreak === null ? `${rhythm.weeksWithoutBreak}w+` : `${rhythm.weeksSinceLastBreak}w`}
-          sub={rhythm.weeksWithoutBreak >= 8 ? "A rest week would be well earned." : "A healthy amount of space."}
-        />
+        <DotCalendar weeks={a.weeklyDots} color={meta.color} size={11} />
+        <p className="mt-3 text-xs text-faint">Filled = served that week · hollow = a break.</p>
       </section>
 
-      {/* Risk factors */}
-      <section className="rise mt-4 card p-6" style={{ animationDelay: "140ms" }}>
-        <h2 className="text-base font-semibold text-ink">What Rhythm noticed</h2>
-        {risk.factors.length === 0 ? (
-          <p className="mt-2 text-sm text-ink-soft">Serving in a sustainable rhythm. Nothing flagged.</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {risk.factors.map((f) => (
-              <li key={f.key} className="flex items-center gap-2.5 text-sm text-ink-soft">
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ background: f.severity === 3 ? "var(--color-high)" : f.severity === 2 ? "var(--color-elevated)" : "var(--color-watch)" }}
-                />
-                {f.label}
-              </li>
-            ))}
-          </ul>
-        )}
-        {(risk.level === "high" || risk.level === "elevated") && (
-          <p className="mt-4 border-t border-line pt-4 text-sm text-ink-soft">
-            Not a verdict — a nudge to grab a coffee and ask, honestly, how they are.
-          </p>
-        )}
+      {/* Pulse — honest empty state */}
+      <section className="rise mt-4 glass rounded-[var(--radius-card)] p-6" style={{ animationDelay: "140ms" }}>
+        <h2 className="text-sm font-medium text-text">How serving has felt</h2>
+        <p className="mt-2 text-sm text-mute">No check-ins logged yet. Pulse responses will appear here once they begin.</p>
       </section>
 
-      {/* Feeling */}
-      <section className="rise mt-4 card p-6" style={{ animationDelay: "180ms" }}>
-        <h2 className="text-base font-semibold text-ink">How serving has felt</h2>
-        {trend.sampleSize > 0 ? (
-          <p className="mt-2 text-sm text-ink-soft">
-            Across the last {trend.sampleSize} check-ins, energy after serving sits around{" "}
-            <strong className="text-ink">{trend.wellbeing.toFixed(1)}/5</strong>.
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-ink-soft">
-            No pulse check-ins yet — this is load only. The first check-in starts the feeling story.
-          </p>
-        )}
+      {/* Care notes — for leads to fill from real conversations */}
+      <section className="rise mt-4 rounded-[var(--radius-card)] border border-dashed border-border-strong p-6" style={{ animationDelay: "180ms" }}>
+        <h2 className="text-sm font-medium text-text">Care notes</h2>
+        <p className="mt-2 text-sm text-mute">Empty. Notes are added by pastoral leads after a real conversation — never auto-filled.</p>
       </section>
 
-      <footer className="mt-8 text-center text-sm text-ink-faint">
-        This view belongs to {person.name.split(" ")[0]}. Rhythm is a mirror, not a microscope.
-      </footer>
-    </main>
+      <p className="mt-6 text-center text-xs text-faint">This unlock is logged. Rhythm is a mirror, not a microscope.</p>
+
+      <BottomNav />
+    </div>
   );
 }
 
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="card p-5">
-      <p className="text-xs uppercase tracking-wide text-ink-faint">{label}</p>
-      <p className="mt-1.5 font-display text-4xl text-ink">{value}</p>
-      <p className="mt-1 text-xs text-ink-soft text-balance">{sub}</p>
+    <div className="glass rounded-2xl p-4 text-center">
+      <p className="font-display text-3xl font-bold text-text">{value}</p>
+      <p className="mt-1 text-xs text-mute">{sub}</p>
+      <p className="mt-2 text-[10px] uppercase tracking-wide text-faint">{label}</p>
     </div>
   );
 }

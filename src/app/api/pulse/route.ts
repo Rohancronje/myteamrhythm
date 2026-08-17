@@ -8,10 +8,13 @@ import { z } from "zod";
 
 const PulseInput = z.object({
   service: z.string().max(60).optional(),
-  energy: z.number().int().min(1).max(5),
-  meaning: z.number().int().min(1).max(5),
-  connection: z.number().int().min(1).max(5),
-  note: z.string().max(2000).optional(),
+  // Q1: More energy / About the same / Less energy
+  energy: z.string().max(40),
+  // Q2: More like worship / More like work
+  worshipOrWork: z.string().max(40),
+  // Q3: one word (word cloud) · Q4: teammate to thank (companionship)
+  word: z.string().max(40).optional(),
+  thanks: z.string().max(120).optional(),
   // In production the link carries a signed token → participant handle.
   token: z.string().optional(),
 });

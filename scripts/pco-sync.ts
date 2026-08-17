@@ -59,13 +59,13 @@ function mode<T>(xs: T[]): T | undefined {
 
   const byPerson = new Map<
     string,
-    { name: string; teams: string[]; roles: string[]; events: { serviceType: string; date: string; status: string }[] }
+    { name: string; teams: string[]; roles: string[]; events: { serviceType: string; date: string; planId: string; status: string; position: string }[] }
   >();
   for (const r of rows) {
     const rec = byPerson.get(r.personId) ?? { name: r.personName, teams: [], roles: [], events: [] };
     rec.teams.push(r.team);
     rec.roles.push(r.position || "Team");
-    rec.events.push({ serviceType: r.serviceType, date: r.date, status: r.status });
+    rec.events.push({ serviceType: r.serviceType, date: r.date, planId: r.planId, status: r.status, position: r.position });
     byPerson.set(r.personId, rec);
   }
 
