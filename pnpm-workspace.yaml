@@ -1,5 +1,7 @@
 allowBuilds:
-  esbuild: set this to true or false
-  sharp: false
-  unrs-resolver: false
+  esbuild: true
+  unrs-resolver: true
+  '@tailwindcss/oxide': true
+  sharp: true
+  '@parcel/watcher': true
 verifyDepsBeforeRun: false

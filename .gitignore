@@ -46,3 +46,7 @@ next-env.d.ts
 
 # real data snapshot (contains names)
 .data/
+.vercel
+
+# vercel
+.vercel

@@ -1,0 +1,9 @@
+# Never upload local secrets, real-data snapshots, or dev artifacts to Vercel.
+.env
+.env.*
+.data
+.git
+.next
+rhythm-shots
+.playwright-mcp
+drizzle
