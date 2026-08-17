@@ -1,5 +1,5 @@
 import { Wordmark } from "@/components/Wordmark";
-import { BottomNav } from "@/components/BottomNav";
+import { AppNav } from "@/components/AppNav";
 import { getSongIntel } from "@/lib/data/songs";
 
 export const dynamic = "force-dynamic";
@@ -138,7 +138,7 @@ export default function SongsPage() {
         </div>
       )}
 
-      <BottomNav />
+      <AppNav />
     </div>
   );
 }

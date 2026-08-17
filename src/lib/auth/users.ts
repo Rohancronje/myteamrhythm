@@ -12,6 +12,7 @@ interface StoredUser {
   email: string;
   name: string;
   role: Role;
+  personId?: string; // Planning Center person id → their own profile
   hash: string; // scrypt:<saltHex>:<hashHex>  (":" not "$" — .env expands $)
 }
 
@@ -40,7 +41,7 @@ export function verifyCredentials(email: string, password: string): SessionUser 
   const user = loadUsers().find((u) => u.email.trim().toLowerCase() === target);
   if (!user) return null;
   if (!verifyPassword(password, user.hash)) return null;
-  return { email: user.email, name: user.name, role: user.role };
+  return { email: user.email, name: user.name, role: user.role, personId: user.personId };
 }
 
 export function hasAnyUsers(): boolean {

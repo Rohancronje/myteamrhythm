@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
-import { BottomNav } from "@/components/BottomNav";
+import { AppNav } from "@/components/AppNav";
 import { getTeamGroups } from "@/lib/data/team";
 import { STATUS_META } from "@/lib/rhythm/status";
 
@@ -77,7 +77,7 @@ export default function TeamsPage() {
         })}
       </div>
 
-      <BottomNav />
+      <AppNav />
     </div>
   );
 }

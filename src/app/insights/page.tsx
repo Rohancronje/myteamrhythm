@@ -1,5 +1,5 @@
 import { Wordmark } from "@/components/Wordmark";
-import { BottomNav } from "@/components/BottomNav";
+import { AppNav } from "@/components/AppNav";
 import { getTeam, getTeamInfo } from "@/lib/data/team";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export default function InsightsPage() {
         </div>
       </section>
 
-      <BottomNav />
+      <AppNav />
     </div>
   );
 }

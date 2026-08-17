@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
-import { BottomNav } from "@/components/BottomNav";
+import { AppNav } from "@/components/AppNav";
 import { DotCalendar } from "@/components/DotCalendar";
 import { getTeamGroupByName } from "@/lib/data/team";
 import { STATUS_META } from "@/lib/rhythm/status";
@@ -86,7 +86,7 @@ export default async function TeamDetailPage({ params }: PageProps<"/teams/[team
         </section>
       )}
 
-      <BottomNav />
+      <AppNav />
     </div>
   );
 }

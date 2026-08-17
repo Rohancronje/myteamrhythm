@@ -39,7 +39,7 @@ export interface TeamInfo {
   generatedAt: string | null;
 }
 
-let cache: { members: TeamMember[]; info: TeamInfo } | null = null;
+let cache: { members: TeamMember[]; all: TeamMember[]; info: TeamInfo } | null = null;
 
 function readSnapshot(): Snapshot | null {
   try {
@@ -59,30 +59,31 @@ function today(): Date {
   return new Date();
 }
 
-function build(): { members: TeamMember[]; info: TeamInfo } {
+function build(): { members: TeamMember[]; all: TeamMember[]; info: TeamInfo } {
   if (cache) return cache;
   const snap = readSnapshot();
   if (!snap) {
-    cache = { members: [], info: { source: "none", org: "NS Family Services", generatedAt: null } };
+    cache = { members: [], all: [], info: { source: "none", org: "NS Family Services", generatedAt: null } };
     return cache;
   }
 
   const now = today();
-  const members = snap.people
-    .map((p): TeamMember => ({
-      id: p.pcoId,
-      name: p.name,
-      handle: p.handle,
-      team: p.team,
-      role: p.role,
-      initials: initials(p.name),
-      assessment: assess(p.events, now, 26),
-    }))
-    // Active = served at least once in the last fortnight (real-date anchored).
-    .filter((m) => m.assessment.recentlyActive);
+  const all = snap.people.map((p): TeamMember => ({
+    id: p.pcoId,
+    name: p.name,
+    handle: p.handle,
+    team: p.team,
+    role: p.role,
+    initials: initials(p.name),
+    assessment: assess(p.events, now, 26),
+  }));
+  // The team/dashboard works with people who served in the last fortnight; a
+  // person's OWN profile must resolve even if they're currently resting.
+  const members = all.filter((m) => m.assessment.recentlyActive);
 
   cache = {
     members,
+    all,
     info: { source: "planning-center", org: snap.org, generatedAt: snap.generatedAt },
   };
   return cache;
@@ -95,7 +96,7 @@ export function getTeamInfo(): TeamInfo {
   return build().info;
 }
 export function getMember(id: string): TeamMember | undefined {
-  return build().members.find((m) => m.id === id);
+  return build().all.find((m) => m.id === id);
 }
 
 const SEV: Record<string, number> = { elevated: 3, watch: 2, steady: 1 };

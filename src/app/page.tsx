@@ -1,5 +1,6 @@
+import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
-import { BottomNav } from "@/components/BottomNav";
+import { AppNav } from "@/components/AppNav";
 import { AccountMenu } from "@/components/AccountMenu";
 import { HomeScreen, type Story, type TeamCard } from "@/components/HomeScreen";
 import { getTeam, getTeamInfo, getFlagged, getTeamGroups } from "@/lib/data/team";
@@ -9,6 +10,10 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getSession();
+  // Members and leaders land on their own profile, not the team-wide dashboard.
+  if (session && session.role !== "admin") {
+    redirect(session.personId ? `/journey/${session.personId}` : "/pulse");
+  }
   const members = getTeam();
   const info = getTeamInfo();
   const flagged = getFlagged(members);
@@ -75,7 +80,7 @@ export default async function Home() {
         <HomeScreen stories={stories} teams={teams} totals={totals} />
       )}
 
-      <BottomNav />
+      <AppNav />
     </div>
   );
 }

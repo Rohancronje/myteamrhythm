@@ -1,6 +1,6 @@
 import { PulseForm } from "@/components/PulseForm";
 import { Wordmark } from "@/components/Wordmark";
-import { BottomNav } from "@/components/BottomNav";
+import { AppNav } from "@/components/AppNav";
 
 export default async function PulsePage({ searchParams }: PageProps<"/pulse">) {
   const sp = await searchParams;
@@ -18,7 +18,7 @@ export default async function PulsePage({ searchParams }: PageProps<"/pulse">) {
 
       <PulseForm service={service} />
 
-      <BottomNav />
+      <AppNav />
     </div>
   );
 }
