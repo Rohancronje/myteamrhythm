@@ -134,6 +134,35 @@ export class PcoClient {
     return plans;
   }
 
+  /** Songs in one plan's setlist, with arrangement + key side-loaded. */
+  async planItems(serviceTypeId: string, planId: string) {
+    const { data, included } = await this.getAll(
+      `/service_types/${serviceTypeId}/plans/${planId}/items?include=song,arrangement,key&per_page=100`,
+    );
+    const songs = new Map(included.filter((r) => r.type === "Song").map((r) => [r.id, r.attributes]));
+    const keys = new Map(included.filter((r) => r.type === "Key").map((r) => [r.id, r.attributes]));
+    const arrangements = new Map(included.filter((r) => r.type === "Arrangement").map((r) => [r.id, r.attributes]));
+
+    return data
+      .filter((i) => (i.attributes.item_type as string) === "song")
+      .map((i) => {
+        const songId = i.relationships?.song?.data?.id ?? "";
+        const keyId = i.relationships?.key?.data?.id ?? "";
+        const arrId = i.relationships?.arrangement?.data?.id ?? "";
+        const song = songs.get(songId);
+        const key = keys.get(keyId);
+        const arr = arrangements.get(arrId);
+        return {
+          songId,
+          title: (i.attributes.title as string) || (song?.title as string) || "Untitled",
+          author: (song?.author as string) ?? "",
+          key: (key?.starting_key as string) || (key?.name as string) || "",
+          bpm: (arr?.bpm as number) ?? null,
+          arrangementName: (arr?.name as string) ?? "",
+        };
+      });
+  }
+
   /** Team members (PlanPerson rows) for one plan, with person + team side-loaded. */
   async planTeamMembers(serviceTypeId: string, planId: string) {
     const { data, included } = await this.getAll(

@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/teams", label: "Teams", icon: TeamsIcon },
+  { href: "/songs", label: "Songs", icon: SongsIcon },
   { href: "/pulse", label: "Check-in", icon: CheckIcon },
   { href: "/insights", label: "Insights", icon: InsightsIcon },
 ];
@@ -54,6 +55,14 @@ function CheckIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#38dd9b" : "currentColor"} strokeWidth="1.8">
       <path d="M21 11.5a8.5 8.5 0 1 1-4-7.2" strokeLinecap="round" /><path d="m8.5 11 3 3 6-6.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function SongsIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#8b6cff" : "currentColor"} strokeWidth="1.8">
+      <path d="M9 18V5l11-2v13" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" />
     </svg>
   );
 }
