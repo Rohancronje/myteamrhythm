@@ -132,6 +132,16 @@ function emojiFor(team: string): string {
   return TEAM_EMOJI.find((t) => t.match.test(team))?.emoji ?? "✨";
 }
 
+/** One team by name (exact match), or undefined. Includes small teams too. */
+export function getTeamGroupByName(name: string): TeamGroup | undefined {
+  const ms = getTeam().filter((m) => m.team === name);
+  if (ms.length === 0) return undefined;
+  const flagged = ms.filter((m) => m.assessment.status !== "steady").length;
+  const hasElevated = ms.some((m) => m.assessment.status === "elevated");
+  const status = hasElevated ? "elevated" : flagged > 0 ? "watch" : "steady";
+  return { team: name, emoji: emojiFor(name), members: ms, flagged, status };
+}
+
 /** Groups members by team, worst-status teams first. */
 export function getTeamGroups(members: TeamMember[] = getTeam()): TeamGroup[] {
   const map = new Map<string, TeamMember[]>();

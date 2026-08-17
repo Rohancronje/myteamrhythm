@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "motion/react";
 import { DotCalendar } from "./DotCalendar";
 import { STATUS_META } from "@/lib/rhythm/status";
 import type { Status } from "@/lib/rhythm/assess";
@@ -74,10 +75,15 @@ export function HomeScreen({
               const meta = STATUS_META[s.status];
               const isSel = s.id === active?.id;
               return (
-                <button key={s.id} onClick={() => setSelected(s.id)} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                <motion.button
+                  key={s.id}
+                  onClick={() => setSelected(s.id)}
+                  whileTap={{ scale: 0.92 }}
+                  className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+                >
                   <span
-                    className="relative flex h-16 w-16 items-center justify-center rounded-full p-[2.5px]"
-                    style={{ background: meta.ring, opacity: isSel ? 1 : 0.82 }}
+                    className="relative flex h-16 w-16 items-center justify-center rounded-full p-[2.5px] transition-transform"
+                    style={{ background: meta.ring, opacity: isSel ? 1 : 0.72, transform: isSel ? "scale(1.06)" : "scale(1)" }}
                   >
                     <span className="flex h-full w-full items-center justify-center rounded-full bg-surface-solid font-display text-sm font-semibold text-text">
                       {s.initials}
@@ -88,8 +94,8 @@ export function HomeScreen({
                       </span>
                     )}
                   </span>
-                  <span className="max-w-full truncate text-[11px] text-mute">{s.name.split(" ")[0]}</span>
-                </button>
+                  <span className="max-w-full truncate text-[11px]" style={{ color: isSel ? "var(--color-text)" : "var(--color-mute)" }}>{s.name.split(" ")[0]}</span>
+                </motion.button>
               );
             })}
           </div>
@@ -98,7 +104,15 @@ export function HomeScreen({
 
       {/* Expanding detail card */}
       {active && (
-        <section className="rise glass rounded-[var(--radius-card)] p-5" style={{ animationDelay: "100ms" }}>
+        <AnimatePresence mode="wait">
+        <motion.section
+          key={active.id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="glass rounded-[var(--radius-card)] p-5"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="flex h-12 w-12 items-center justify-center rounded-full p-[2px]" style={{ background: STATUS_META[active.status].ring }}>
@@ -124,7 +138,8 @@ export function HomeScreen({
           <Link href={`/journey/${active.id}`} className="mt-5 inline-flex items-center gap-1 text-sm font-medium grad-text">
             Open pastoral profile →
           </Link>
-        </section>
+        </motion.section>
+        </AnimatePresence>
       )}
 
       {/* Team cards */}
@@ -137,8 +152,8 @@ export function HomeScreen({
               return (
                 <Link
                   key={t.team}
-                  href="/teams"
-                  className="glass relative w-44 shrink-0 overflow-hidden rounded-2xl p-4"
+                  href={`/teams/${encodeURIComponent(t.team)}`}
+                  className="glass card-tap relative w-44 shrink-0 overflow-hidden rounded-2xl p-4 transition-transform active:scale-[0.97]"
                 >
                   <span className="absolute inset-x-0 top-0 h-1" style={{ background: meta.ring }} />
                   <div className="mt-1 text-2xl">{t.emoji}</div>

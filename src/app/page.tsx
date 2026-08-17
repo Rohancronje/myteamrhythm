@@ -38,12 +38,15 @@ export default function Home() {
     status: g.status,
   }));
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
       <header className="rise mb-7 flex items-center justify-between">
         <div>
           <Wordmark />
-          <p className="mt-1.5 text-sm text-mute">NS Family Services · pastoral view</p>
+          <p className="mt-1.5 text-sm text-mute">{greeting} · NS Family Services</p>
         </div>
         <span
           className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs"

@@ -33,18 +33,18 @@ export default function TeamsPage() {
             <section key={g.team} className="rise glass overflow-hidden rounded-[var(--radius-card)]" style={{ animationDelay: `${gi * 40}ms` }}>
               <span className="block h-1 w-full" style={{ background: meta.ring }} />
               <div className="p-5">
-                <div className="flex items-center justify-between">
+                <Link href={`/teams/${encodeURIComponent(g.team)}`} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{g.emoji}</span>
                     <div>
                       <h2 className="font-display text-lg font-semibold text-text">{g.team}</h2>
-                      <p className="text-xs text-mute">{g.members.length} serving</p>
+                      <p className="text-xs text-mute">{g.members.length} serving · tap to open</p>
                     </div>
                   </div>
                   <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ color: meta.color, background: meta.soft }}>
                     {g.flagged > 0 ? `${g.flagged} to check` : "All steady"}
                   </span>
-                </div>
+                </Link>
 
                 {flagged.length > 0 && (
                   <ul className="mt-4 space-y-2">
