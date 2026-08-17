@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rhythm
 
-## Getting Started
+A stats and insight platform for worship and volunteer teams. It tracks serving
+**load**, predicts burnout before it happens, and measures team emotional /
+spiritual **health** — not just attendance.
 
-First, run the development server:
+**Pilot:** City Impact Church, North Shore — NS Family Services (Sunday AM / PM,
+Wednesday Night).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## The idea
+
+Borrow the **Acute:Chronic Workload Ratio (ACWR)** from sports science — the model
+athletic teams use to predict injury risk by comparing recent training load to a
+rolling baseline — and apply it to serving load. A ratio sustained above ~1.3–1.5
+flags a spike *before* it becomes a resignation conversation.
+
+Cross-reference that objective load signal with a subjective **pulse check-in**
+(two questions after a service). Load alone gives false positives; feeling alone
+gives no early warning. Together they're a real leading indicator.
+
+## Architecture
+
+```
+Planning Center API ──(sync)──▶ Postgres ──▶ ACWR + wellbeing engine ──▶ dashboards
+Pulse check-in (web link) ──────▶ (pseudonymous)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `src/lib/rhythm/acwr.ts` — the load engine (weekly-cadence adapted ACWR, EWMA).
+- `src/lib/rhythm/wellbeing.ts` — load × feeling cross-reference + the **privacy gate**.
+- `src/lib/pco/` — Planning Center Services API client + pseudonymiser.
+- `src/db/schema.ts` — Postgres schema (Drizzle), privacy-enforceable by design.
+- `src/lib/data/seed.ts` — deterministic pilot data so the UI runs before PCO is wired.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Privacy (non-negotiable)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Pulse data is **pseudonymous by default**; team dashboards are aggregated and anonymised.
+- Only **pastoral-care leads** can unlock individual detail, and only once a risk threshold is crossed (`canUnlockIndividual`).
+- Output is a **prompt for a human conversation** — never a public flag, score, or leaderboard.
+- Everyone gets their own private **serving journey** view.
 
-## Learn More
+## Getting started
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm install
+cp .env.example .env.local   # fill in PCO + DB creds (NEVER commit .env.local)
+pnpm dev                     # http://localhost:3000
+pnpm tsx scripts/verify-engine.ts   # sanity-check the ACWR engine
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Connecting Planning Center (Phase 0 probe)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Create a Personal Access Token at
+   <https://api.planningcenteronline.com/oauth/applications>.
+2. Put the app id / secret in `.env.local` as `PCO_APP_ID` / `PCO_SECRET`.
+3. `GET /api/sync` to verify the token and list your `service_types`.
+4. Fill `PCO_SERVICE_TYPE_MAP` (e.g. `123:sunday_am,124:sunday_pm,125:wednesday_night`).
+5. `POST /api/sync` to pull scheduled assignments.
 
-## Deploy on Vercel
+> **Security:** if a token ever leaks (chat, screenshot, commit), rotate it
+> immediately. The whole trust model depends on it.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Routes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Route | What |
+| --- | --- |
+| `/` | Aggregated team dashboard (pastoral leads) |
+| `/pulse` | Post-service pulse check-in (the web link) |
+| `/journey/[id]` | A person's private serving journey |
+| `/api/sync` | Planning Center verify + sync |
+| `/api/pulse` | Pulse submission |

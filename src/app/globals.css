@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Rhythm — "warm dusk" direction.
+  A candlelit, atmospheric canvas made for a creative worship team: deep espresso
+  night, cream light, and rhythm waves that GLOW. Bold oversized serif display,
+  vivid but warm accents. Even a load "spike" glows coral-amber like embers, never
+  an alarm-red. This should feel art-directed, not administrative.
+*/
+
+@theme {
+  /* night canvas */
+  --color-night: #14100c;
+  --color-night-2: #1b1510;
+  --color-card: #221a13;
+  --color-card-2: #2a2018;
+  --color-line: #3a2c20;
+  --color-line-soft: #2f251b;
+
+  /* light */
+  --color-cream: #f6ecdd;
+  --color-cream-soft: #cdb89f;
+  --color-cream-faint: #8c7860;
+
+  /* warm accents */
+  --color-ember: #e8703a;
+  --color-ember-bright: #ff8a4c;
+  --color-gold: #e6ac3e;
+  --color-clay: #d9542f;
+  --color-teal: #4fa894;
+  --color-rose: #d98a6a;
+
+  /* rhythm zones — all glow warm */
+  --color-zone-resting: #6fb0b8;
+  --color-zone-steady: #8bbd6a;
+  --color-zone-climbing: #e6ac3e;
+  --color-zone-spiking: #ec6a3c;
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-hanken), system-ui, sans-serif;
+
+  --radius-card: 22px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background-color: var(--color-night);
+    color: var(--color-cream);
+    font-family: var(--font-body);
+    /* layered dusk glow: two warm blooms + fine grain */
+    background-image:
+      radial-gradient(120% 80% at 12% -8%, rgba(232, 112, 58, 0.16), transparent 55%),
+      radial-gradient(90% 70% at 92% 4%, rgba(230, 172, 62, 0.1), transparent 50%),
+      radial-gradient(70% 60% at 60% 108%, rgba(79, 168, 148, 0.08), transparent 60%);
+    background-attachment: fixed;
+  }
+  body::before {
+    /* film grain overlay */
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.5;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255, 240, 220, 0.05) 1px, transparent 0);
+    background-size: 3px 3px;
+    mix-blend-mode: overlay;
+  }
+  ::selection {
+    background: var(--color-ember);
+    color: var(--color-night);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .glass {
+    background:
+      linear-gradient(180deg, rgba(255, 240, 220, 0.04), rgba(255, 240, 220, 0));
+    background-color: color-mix(in srgb, var(--color-card) 88%, transparent);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--color-line);
+  }
+  .card-hover {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s,
+      box-shadow 0.35s;
+  }
+  .card-hover:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--color-ember) 45%, var(--color-line));
+    box-shadow: 0 18px 50px -22px rgba(232, 112, 58, 0.5);
+  }
+  .glow-text {
+    text-shadow: 0 0 34px rgba(232, 112, 58, 0.35);
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .rise {
+    animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
 }
