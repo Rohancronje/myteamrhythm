@@ -2,9 +2,9 @@
 // JSON snapshots, so the data source and Song Intelligence engine work unchanged
 // whether the data comes from Postgres or a snapshot file.
 
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { getDb } from "./index";
-import { people as peopleT, servingEvents, songServices, songSlots, syncState } from "./schema";
+import { people as peopleT, servingEvents, songServices, songSlots, syncState, upcomingServices } from "./schema";
 
 const ORG = "City Impact · NS Family Services";
 
@@ -38,6 +38,18 @@ export async function readRosterSnapshot() {
       events: byPerson.get(p.pcoId) ?? [],
     })),
   };
+}
+
+export async function readUpcoming() {
+  const rows = await getDb().select().from(upcomingServices).orderBy(asc(upcomingServices.serviceDate));
+  return rows.map((r) => ({
+    planId: r.planId,
+    date: r.serviceDate,
+    serviceType: r.serviceType,
+    title: r.title ?? "",
+    seriesTitle: r.seriesTitle ?? "",
+    ...(r.data as { times: unknown[]; roster: unknown[]; songs: unknown[] }),
+  }));
 }
 
 export async function readSongsSnapshot() {

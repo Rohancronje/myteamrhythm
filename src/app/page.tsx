@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getSession();
-  // Members and leaders land on their own profile, not the team-wide dashboard.
+  // Members and leaders land on "your next service", not the team-wide dashboard.
   if (session && session.role !== "admin") {
-    redirect(session.personId ? `/journey/${session.personId}` : "/pulse");
+    redirect("/next");
   }
   const members = await getTeam();
   const info = await getTeamInfo();

@@ -2,9 +2,31 @@
 // Center. Idempotent — natural keys on Planning Center ids mean re-syncs update
 // in place rather than duplicating.
 
-import { inArray } from "drizzle-orm";
+import { inArray, sql as dsql } from "drizzle-orm";
 import { getDb } from "./index";
-import { people, servingEvents, songServices, songSlots, syncState, users } from "./schema";
+import { people, servingEvents, songServices, songSlots, syncState, upcomingServices, users } from "./schema";
+
+export interface UpcomingRow {
+  planId: string;
+  serviceDate: string;
+  serviceType: string;
+  title: string | null;
+  seriesTitle: string | null;
+  data: unknown; // { times, roster, songs }
+}
+
+/** Replace the whole upcoming window (small, forward-looking set). */
+export async function writeUpcoming(rows: UpcomingRow[], meta?: unknown) {
+  const db = getDb();
+  await db.delete(upcomingServices).where(dsql`true`);
+  for (const c of chunk(rows, 200)) {
+    if (c.length) await db.insert(upcomingServices).values(c);
+  }
+  await db
+    .insert(syncState)
+    .values({ key: "upcoming", meta: meta ?? null })
+    .onConflictDoUpdate({ target: syncState.key, set: { meta: meta ?? null, lastSyncedAt: nowSql() } });
+}
 
 export interface UserRow {
   email: string;

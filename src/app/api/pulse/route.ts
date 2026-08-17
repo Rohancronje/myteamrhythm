@@ -14,7 +14,7 @@ const PulseInput = z.object({
   worshipOrWork: z.string().max(40),
   // Q3: one word (word cloud) · Q4: teammate to thank (companionship)
   word: z.string().max(40).optional(),
-  thanks: z.string().max(120).optional(),
+  thanks: z.string().max(400).optional(),
   // In production the link carries a signed token → participant handle.
   token: z.string().optional(),
 });

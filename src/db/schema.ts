@@ -98,6 +98,17 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+/** Upcoming (future) services for the "your next service" view. Small forward
+ *  window, replaced wholesale on each sync. `data` holds times, roster, songs. */
+export const upcomingServices = pgTable("upcoming_services", {
+  planId: text("plan_id").primaryKey(),
+  serviceDate: date("service_date").notNull(),
+  serviceType: text("service_type").notNull(),
+  title: text("title"),
+  seriesTitle: text("series_title"),
+  data: jsonb("data").notNull(),
+});
+
 /** Sync bookkeeping (last run + counts) per source. */
 export const syncState = pgTable("sync_state", {
   key: text("key").primaryKey(), // 'roster' | 'songs'

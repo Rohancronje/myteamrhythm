@@ -32,10 +32,16 @@ export function BottomNav({ items }: { items: NavItem[] }) {
 
 function Icon({ name, active }: { name: NavItem["icon"]; active: boolean }) {
   const stroke = active
-    ? { home: "url(#g1)", teams: "#ff5c8a", songs: "#8b6cff", check: "#38dd9b", insights: "#5cc2ff", me: "url(#g1)" }[name]
+    ? { home: "url(#g1)", teams: "#ff5c8a", songs: "#8b6cff", check: "#38dd9b", insights: "#5cc2ff", me: "url(#g1)", next: "#ffb454" }[name]
     : "currentColor";
   const common = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none" as const };
   switch (name) {
+    case "next":
+      return (
+        <svg {...common} stroke={stroke} strokeWidth="1.8">
+          <rect x="3" y="4.5" width="18" height="16" rx="2" /><path d="M3 9h18M8 2.5v4M16 2.5v4" strokeLinecap="round" /><path d="M12 12.5v3l2 1.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
     case "home":
       return (
         <svg {...common}>

@@ -134,6 +134,47 @@ export class PcoClient {
     return plans;
   }
 
+  /**
+   * Lists UPCOMING plans for a service type up to `untilISO`. Ordered soonest
+   * first. Powers the "your next service" view.
+   */
+  async listFuturePlans(serviceTypeId: string, untilISO: string) {
+    const plans: { id: string; date: string; title: string; seriesTitle: string }[] = [];
+    let next: string | undefined =
+      `/service_types/${serviceTypeId}/plans?filter=future&order=sort_date&per_page=25`;
+    outer: while (next) {
+      const page: JsonApiPage = await this.get(next);
+      for (const plan of page.data) {
+        const date = (plan.attributes.sort_date as string | null)?.slice(0, 10);
+        if (!date) continue;
+        if (date > untilISO) break outer; // ordered asc — nothing further matters
+        plans.push({
+          id: plan.id,
+          date,
+          title: (plan.attributes.title as string) ?? "",
+          seriesTitle: (plan.attributes.series_title as string) ?? "",
+        });
+      }
+      next = page.links?.next;
+    }
+    return plans;
+  }
+
+  /** Call/rehearsal/service times for one plan (from plan_times). */
+  async planTimes(serviceTypeId: string, planId: string) {
+    const { data } = await this.getAll(
+      `/service_types/${serviceTypeId}/plans/${planId}/plan_times?per_page=100`,
+    );
+    return data
+      .map((t) => ({
+        name: (t.attributes.name as string) || labelForTimeType(t.attributes.time_type as string),
+        startsAt: (t.attributes.starts_at as string) ?? "",
+        timeType: (t.attributes.time_type as string) ?? "",
+      }))
+      .filter((t) => t.startsAt)
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }
+
   /** Songs in one plan's setlist, with arrangement + key side-loaded. */
   async planItems(serviceTypeId: string, planId: string) {
     const { data, included } = await this.getAll(
@@ -232,6 +273,17 @@ export class PcoClient {
       }
     }
     return results;
+  }
+}
+
+function labelForTimeType(t: string): string {
+  switch ((t ?? "").toLowerCase()) {
+    case "rehearsal":
+      return "Rehearsal";
+    case "service":
+      return "Service";
+    default:
+      return "Call time";
   }
 }
 
