@@ -37,10 +37,10 @@ function median(xs: number[]): number | null {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
-/** ACWR `weeksAgo` back in a person's series (0 = current). */
+/** ACWR `weeksAgo` back from the person's effective "now" (0 = current). */
 function acwrAgo(p: SeededPerson, weeksAgo: number): number | null {
   const s = p.rhythm.series;
-  return s[s.length - 1 - weeksAgo]?.acwr ?? null;
+  return s[p.rhythm.currentIndex - weeksAgo]?.acwr ?? null;
 }
 
 export function buildInsights(data: SeededPerson[], trendWeeks = 12): TeamInsights {
@@ -155,9 +155,13 @@ export interface Forecast {
   projectedTeamMedian: number | null;
 }
 
-/** Linear slope of the last `n` non-null ACWR points in a series. */
+/** Linear slope of the last `n` non-null ACWR points up to the effective now. */
 function loadSlope(p: SeededPerson, n = 4): { slope: number; last: number } | null {
-  const vals = p.rhythm.series.map((s) => s.acwr).filter((x): x is number => x != null).slice(-n);
+  const vals = p.rhythm.series
+    .slice(0, p.rhythm.currentIndex + 1)
+    .map((s) => s.acwr)
+    .filter((x): x is number => x != null)
+    .slice(-n);
   if (vals.length < 2) return null;
   const xMean = (vals.length - 1) / 2;
   const yMean = vals.reduce((a, b) => a + b, 0) / vals.length;
@@ -198,4 +202,100 @@ export function buildForecast(data: SeededPerson[], horizonWeeks = 2): Forecast 
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+// ── Risk assessment ───────────────────────────────────────────────────────────
+//
+// Turns the signals into a plain-language risk read PER PERSON. Works on load
+// alone (what we have live from Planning Center) and gets sharper once pulse
+// feeling arrives. This is the "what about my team's risk" answer: not a vibe, a
+// ranked list of people with the specific factors driving each one.
+
+export type RiskLevel = "calm" | "watch" | "elevated" | "high";
+
+export interface RiskFactor {
+  key: string;
+  label: string;
+  severity: 1 | 2 | 3; // watch / elevated / high
+}
+
+export interface RiskAssessment {
+  id: string;
+  handle: string;
+  name: string;
+  team: string;
+  level: RiskLevel;
+  score: number;
+  factors: RiskFactor[];
+  acwr: number | null;
+  loadDelta: number;
+  weeksWithoutBreak: number;
+  series: SeededPerson["rhythm"]["series"];
+}
+
+const LEVEL_BY_SEVERITY: Record<number, RiskLevel> = { 0: "calm", 1: "watch", 2: "elevated", 3: "high" };
+
+export function assessRisk(p: SeededPerson): RiskAssessment {
+  const factors: RiskFactor[] = [];
+  const acwr = p.rhythm.currentAcwr;
+  const weeks = p.rhythm.weeksWithoutBreak;
+  const s = p.rhythm.series;
+  const now = s[p.rhythm.currentIndex]?.acwr ?? null;
+  const past = s[p.rhythm.currentIndex - 4]?.acwr ?? null;
+  // Only call it a "rise" when there was a real baseline to rise from — otherwise
+  // a returning volunteer coming off ~0 looks like a huge (meaningless) jump.
+  const loadDelta = now != null && past != null && past >= 0.5 ? now - past : 0;
+
+  // Load level
+  if (acwr != null && acwr >= 1.5) factors.push({ key: "spike", label: `Load spiking · ${acwr.toFixed(2)}×`, severity: 3 });
+  else if (acwr != null && acwr >= 1.3) factors.push({ key: "climb", label: `Load climbing · ${acwr.toFixed(2)}×`, severity: 2 });
+
+  // Time since a break
+  if (weeks >= 12) factors.push({ key: "nobreak", label: `${weeks} weeks no break`, severity: 3 });
+  else if (weeks >= 8) factors.push({ key: "nobreak", label: `${weeks} weeks no break`, severity: 2 });
+  else if (weeks >= 6) factors.push({ key: "nobreak", label: `${weeks} weeks no break`, severity: 1 });
+
+  // Trajectory
+  if (loadDelta >= 0.35) factors.push({ key: "rising", label: `Rising fast · ▲${loadDelta.toFixed(2)}`, severity: 2 });
+  else if (loadDelta >= 0.2) factors.push({ key: "rising", label: `Rising · ▲${loadDelta.toFixed(2)}`, severity: 1 });
+
+  // Feeling (only if pulse data exists)
+  if (p.signal.wellbeing != null && p.signal.wellbeing <= 2.6)
+    factors.push({ key: "feeling", label: "Running low after serving", severity: 3 });
+  else if (p.signal.wellbeingSlope != null && p.signal.wellbeingSlope <= -0.15)
+    factors.push({ key: "feeling-trend", label: "Energy trending down", severity: 2 });
+
+  const maxSev = factors.reduce((m, f) => Math.max(m, f.severity), 0);
+  const score = factors.reduce((s, f) => s + f.severity, 0);
+
+  return {
+    id: p.person.id,
+    handle: p.person.handle,
+    name: p.person.name,
+    team: p.person.team,
+    level: LEVEL_BY_SEVERITY[maxSev],
+    score,
+    factors,
+    acwr,
+    loadDelta,
+    weeksWithoutBreak: weeks,
+    series: p.rhythm.series,
+  };
+}
+
+export function assessTeam(data: SeededPerson[]) {
+  const all = data.map(assessRisk).sort((a, b) => b.score - a.score || (b.acwr ?? 0) - (a.acwr ?? 0));
+  const atRisk = all.filter((r) => r.level !== "calm");
+  const counts = {
+    high: all.filter((r) => r.level === "high").length,
+    elevated: all.filter((r) => r.level === "elevated").length,
+    watch: all.filter((r) => r.level === "watch").length,
+    calm: all.filter((r) => r.level === "calm").length,
+  };
+  const factorTally = {
+    spike: all.filter((r) => r.factors.some((f) => f.key === "spike" || f.key === "climb")).length,
+    nobreak: all.filter((r) => r.factors.some((f) => f.key === "nobreak")).length,
+    rising: all.filter((r) => r.factors.some((f) => f.key === "rising")).length,
+  };
+  return { all, atRisk, counts, factorTally };
 }

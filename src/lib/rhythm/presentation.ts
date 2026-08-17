@@ -4,6 +4,17 @@
 
 import type { AttentionLevel } from "./wellbeing";
 import type { RhythmZone } from "./types";
+import type { RiskLevel } from "./insights";
+
+export const RISK_META: Record<
+  RiskLevel,
+  { label: string; color: string; bg: string }
+> = {
+  calm: { label: "Calm", color: "var(--color-calm)", bg: "color-mix(in srgb, var(--color-calm) 12%, white)" },
+  watch: { label: "Watch", color: "var(--color-watch)", bg: "color-mix(in srgb, var(--color-watch) 14%, white)" },
+  elevated: { label: "Elevated", color: "var(--color-elevated)", bg: "color-mix(in srgb, var(--color-elevated) 14%, white)" },
+  high: { label: "High", color: "var(--color-high)", bg: "color-mix(in srgb, var(--color-high) 14%, white)" },
+};
 
 export const ZONE_META: Record<
   RhythmZone,

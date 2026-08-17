@@ -66,6 +66,10 @@ export type RhythmZone = "resting" | "steady" | "climbing" | "spiking";
 export interface PersonRhythm {
   personId: string;
   series: WeeklyLoadPoint[];
+  /** Index into `series` of the most recent SERVED week — the "effective now".
+   *  The calendar-latest week is often empty (this week's services haven't
+   *  happened yet), so all current metrics are read from here, not series end. */
+  currentIndex: number;
   /** Latest ACWR, or null if not enough history. */
   currentAcwr: number | null;
   zone: RhythmZone;

@@ -170,20 +170,28 @@ export function zoneForAcwr(acwr: number | null, config: RhythmConfig): RhythmZo
   return "resting";
 }
 
-/** Counts the current run of consecutive non-zero-load weeks at the tail. */
-function trailingServingStreak(series: WeeklyLoadPoint[]): number {
-  let streak = 0;
+/** Index of the most recent week with any load; falls back to the last week. */
+function lastServedIndex(series: WeeklyLoadPoint[]): number {
   for (let i = series.length - 1; i >= 0; i--) {
+    if (series[i].rawLoad > 0) return i;
+  }
+  return series.length - 1;
+}
+
+/** Consecutive served weeks ending at `end` (the current serving streak). */
+function servingStreak(series: WeeklyLoadPoint[], end: number): number {
+  let streak = 0;
+  for (let i = end; i >= 0; i--) {
     if (series[i].rawLoad > 0) streak++;
     else break;
   }
   return streak;
 }
 
-/** Weeks since the last 0-load week, i.e. the last genuine break. */
-function weeksSinceBreak(series: WeeklyLoadPoint[]): number | null {
-  for (let i = series.length - 1; i >= 0; i--) {
-    if (series[i].rawLoad === 0) return series.length - 1 - i;
+/** Weeks between `end` and the previous 0-load week (the last genuine break). */
+function weeksSinceBreak(series: WeeklyLoadPoint[], end: number): number | null {
+  for (let i = end; i >= 0; i--) {
+    if (series[i].rawLoad === 0) return end - i;
   }
   return null; // never rested in the observed window
 }
@@ -197,16 +205,18 @@ export function computePersonRhythm(
 ): PersonRhythm {
   const raw = buildWeeklyLoad(events, config, opts);
   const series = computeAcwrSeries(raw, config);
-  const last = series[series.length - 1];
-  const currentAcwr = last?.acwr ?? null;
+  // "Now" = the most recent week they actually served, not the calendar end.
+  const idx = lastServedIndex(series);
+  const currentAcwr = series[idx]?.acwr ?? null;
 
   return {
     personId,
     series,
+    currentIndex: idx,
     currentAcwr,
     zone: zoneForAcwr(currentAcwr, config),
-    weeksWithoutBreak: trailingServingStreak(series),
-    weeksSinceLastBreak: weeksSinceBreak(series),
+    weeksWithoutBreak: servingStreak(series, idx),
+    weeksSinceLastBreak: weeksSinceBreak(series, idx),
   };
 }
 

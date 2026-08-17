@@ -1,45 +1,41 @@
 @import "tailwindcss";
 
 /*
-  Rhythm — "warm dusk" direction.
-  A candlelit, atmospheric canvas made for a creative worship team: deep espresso
-  night, cream light, and rhythm waves that GLOW. Bold oversized serif display,
-  vivid but warm accents. Even a load "spike" glows coral-amber like embers, never
-  an alarm-red. This should feel art-directed, not administrative.
+  Rhythm — clean light system.
+  White canvas, calm neutrals, and a purposeful risk scale (green → amber →
+  orange → red). Designed to read like a focused analytics tool: the data is the
+  decoration. One warm brand accent (clay) used sparingly.
 */
 
 @theme {
-  /* night canvas */
-  --color-night: #14100c;
-  --color-night-2: #1b1510;
-  --color-card: #221a13;
-  --color-card-2: #2a2018;
-  --color-line: #3a2c20;
-  --color-line-soft: #2f251b;
+  --color-bg: #faf9f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f4f1;
+  --color-ink: #1c1a18;
+  --color-ink-soft: #57534e;
+  --color-ink-faint: #a29d97;
+  --color-line: #e9e6e1;
+  --color-line-strong: #dcd8d2;
 
-  /* light */
-  --color-cream: #f6ecdd;
-  --color-cream-soft: #cdb89f;
-  --color-cream-faint: #8c7860;
+  --color-brand: #b8542e; /* clay — links, wordmark */
+  --color-brand-soft: #f2e3da;
 
-  /* warm accents */
-  --color-ember: #e8703a;
-  --color-ember-bright: #ff8a4c;
-  --color-gold: #e6ac3e;
-  --color-clay: #d9542f;
-  --color-teal: #4fa894;
-  --color-rose: #d98a6a;
+  /* risk scale */
+  --color-calm: #3f9142;
+  --color-watch: #c98a2b;
+  --color-elevated: #dd6a2a;
+  --color-high: #cf3a2c;
 
-  /* rhythm zones — all glow warm */
-  --color-zone-resting: #6fb0b8;
-  --color-zone-steady: #8bbd6a;
-  --color-zone-climbing: #e6ac3e;
-  --color-zone-spiking: #ec6a3c;
+  /* zones (align to risk feel) */
+  --color-zone-resting: #6a93b0;
+  --color-zone-steady: #3f9142;
+  --color-zone-climbing: #dd6a2a;
+  --color-zone-spiking: #cf3a2c;
 
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-body: var(--font-hanken), system-ui, sans-serif;
 
-  --radius-card: 22px;
+  --radius-card: 16px;
 }
 
 @layer base {
@@ -48,31 +44,13 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    background-color: var(--color-night);
-    color: var(--color-cream);
+    background-color: var(--color-bg);
+    color: var(--color-ink);
     font-family: var(--font-body);
-    /* layered dusk glow: two warm blooms + fine grain */
-    background-image:
-      radial-gradient(120% 80% at 12% -8%, rgba(232, 112, 58, 0.16), transparent 55%),
-      radial-gradient(90% 70% at 92% 4%, rgba(230, 172, 62, 0.1), transparent 50%),
-      radial-gradient(70% 60% at 60% 108%, rgba(79, 168, 148, 0.08), transparent 60%);
-    background-attachment: fixed;
-  }
-  body::before {
-    /* film grain overlay */
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 100;
-    opacity: 0.5;
-    background-image: radial-gradient(circle at 1px 1px, rgba(255, 240, 220, 0.05) 1px, transparent 0);
-    background-size: 3px 3px;
-    mix-blend-mode: overlay;
   }
   ::selection {
-    background: var(--color-ember);
-    color: var(--color-night);
+    background: var(--color-brand-soft);
+    color: var(--color-ink);
   }
 }
 
@@ -84,30 +62,25 @@
   .text-balance {
     text-wrap: balance;
   }
-  .glass {
-    background:
-      linear-gradient(180deg, rgba(255, 240, 220, 0.04), rgba(255, 240, 220, 0));
-    background-color: color-mix(in srgb, var(--color-card) 88%, transparent);
-    backdrop-filter: blur(6px);
+  .card {
+    background: var(--color-surface);
     border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
   }
   .card-hover {
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s,
-      box-shadow 0.35s;
+    transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
   }
   .card-hover:hover {
-    transform: translateY(-3px);
-    border-color: color-mix(in srgb, var(--color-ember) 45%, var(--color-line));
-    box-shadow: 0 18px 50px -22px rgba(232, 112, 58, 0.5);
+    border-color: var(--color-line-strong);
+    box-shadow: 0 8px 24px -14px rgba(28, 26, 24, 0.25);
   }
-  .glow-text {
-    text-shadow: 0 0 34px rgba(232, 112, 58, 0.35);
+  .tabnum {
+    font-variant-numeric: tabular-nums;
   }
-
   @keyframes rise {
     from {
       opacity: 0;
-      transform: translateY(16px);
+      transform: translateY(8px);
     }
     to {
       opacity: 1;
@@ -115,15 +88,11 @@
     }
   }
   .rise {
-    animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   @keyframes draw {
     to {
       stroke-dashoffset: 0;
     }
-  }
-  @keyframes floaty {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
   }
 }

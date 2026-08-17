@@ -65,7 +65,6 @@ export function RhythmLine({
 
   const uid = `${Math.round(width)}-${Math.round(maxVal * 100)}-${series.length}`;
   const gid = `rl-fill-${uid}`;
-  const glowId = `rl-glow-${uid}`;
 
   return (
     <svg
@@ -78,16 +77,9 @@ export function RhythmLine({
     >
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.34" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.16" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
-        <filter id={glowId} x="-20%" y="-40%" width="140%" height="180%">
-          <feGaussianBlur stdDeviation="3.2" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
       <path d={area} fill={`url(#${gid})`} />
@@ -96,10 +88,10 @@ export function RhythmLine({
         <path
           d={chronicLine}
           fill="none"
-          stroke="var(--color-cream-faint)"
+          stroke="var(--color-ink-faint)"
           strokeWidth={1.25}
           strokeDasharray="2 4"
-          opacity={0.5}
+          opacity={0.6}
         />
       )}
 
@@ -107,8 +99,7 @@ export function RhythmLine({
         d={acuteLine}
         fill="none"
         stroke={color}
-        filter={`url(#${glowId})`}
-        strokeWidth={2.5}
+        strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
         style={
