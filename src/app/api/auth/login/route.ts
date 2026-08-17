@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid input" }, { status: 400 });
   }
 
-  const user = verifyCredentials(parsed.data.email, parsed.data.password);
+  const user = await verifyCredentials(parsed.data.email, parsed.data.password);
   if (!user) {
     // Deliberately vague — don't reveal whether the email exists.
     return NextResponse.json({ ok: false, error: "Wrong email or password" }, { status: 401 });

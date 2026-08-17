@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 // Song Intelligence (handover Part B) — rotation health, key/tempo library, and
 // worship-leader → song/key correlation, live from the Services API setlists.
 
-export default function SongsPage() {
-  const intel = getSongIntel();
+export default async function SongsPage() {
+  const intel = await getSongIntel();
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">

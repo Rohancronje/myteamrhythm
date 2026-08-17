@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 // Insights — plain-language rollups only. The pulse word cloud stays an honest
 // empty state until check-ins begin (handover: never fabricate mood data).
 
-export default function InsightsPage() {
-  const members = getTeam();
-  const info = getTeamInfo();
+export default async function InsightsPage() {
+  const members = await getTeam();
+  const info = await getTeamInfo();
   const elevated = members.filter((m) => m.assessment.status === "elevated").length;
   const watch = members.filter((m) => m.assessment.status === "watch").length;
   const steady = members.filter((m) => m.assessment.status === "steady").length;

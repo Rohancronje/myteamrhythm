@@ -77,4 +77,23 @@ function leaderOf(members: { personName: string; position: string }[]): string |
   writeFileSync(".data/pco-songs.json", JSON.stringify(snapshot, null, 2));
   const totalSongs = services.reduce((n, s) => n + s.songs.length, 0);
   console.log(`\n✓ Wrote .data/pco-songs.json — ${services.length} services, ${totalSongs} song slots.`);
+
+  if (process.env.DATABASE_URL) {
+    const { writeSongs } = await import("../src/db/writers");
+    const serviceRows = services.map((s) => ({ planId: s.planId, serviceDate: s.date, serviceType: s.serviceType, leader: s.leader }));
+    const slotRows = services.flatMap((s) =>
+      s.songs.map((song, i) => ({
+        planId: s.planId,
+        songId: song.songId,
+        title: song.title,
+        author: song.author,
+        keyName: song.key,
+        bpm: song.bpm == null ? null : Math.round(song.bpm),
+        position: i,
+      })),
+    );
+    await writeSongs(serviceRows, slotRows, { windowWeeks: WEEKS, services: services.length, slots: slotRows.length });
+    console.log(`✓ Wrote ${serviceRows.length} services + ${slotRows.length} song slots to Postgres.`);
+  }
+  process.exit(0);
 })();

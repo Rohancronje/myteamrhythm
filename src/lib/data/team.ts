@@ -1,7 +1,7 @@
-// The team data layer for the pastoral view. Reads the Planning Center snapshot
-// and produces real-name assessments (handover section 3: pastoral view sees real
-// names). Falls back to nothing if no snapshot — the UI shows an honest empty
-// state rather than sample data pretending to be real people.
+// The team data layer. Reads from Postgres when DATABASE_URL is set, otherwise
+// from the local snapshot, otherwise an honest empty state. Produces real-name
+// assessments for the pastoral view (handover section 3). Async throughout so it
+// works against the DB on Vercel where local files aren't available.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,7 +16,7 @@ interface SnapshotPerson {
   events: PersonEvent[];
 }
 interface Snapshot {
-  generatedAt: string;
+  generatedAt: string | null;
   anchor: string;
   windowWeeks: number;
   org: string;
@@ -32,16 +32,20 @@ export interface TeamMember {
   initials: string;
   assessment: Assessment;
 }
-
 export interface TeamInfo {
   source: "planning-center" | "none";
   org: string;
   generatedAt: string | null;
 }
 
-let cache: { members: TeamMember[]; all: TeamMember[]; info: TeamInfo } | null = null;
+let cache: Promise<{ members: TeamMember[]; all: TeamMember[]; info: TeamInfo }> | null = null;
 
-function readSnapshot(): Snapshot | null {
+async function loadSnapshot(): Promise<Snapshot | null> {
+  if (process.env.DATABASE_URL) {
+    const { readRosterSnapshot } = await import("@/db/read");
+    const snap = await readRosterSnapshot();
+    return snap.people.length ? snap : null;
+  }
   try {
     return JSON.parse(readFileSync(join(process.cwd(), ".data", "pco-snapshot.json"), "utf8")) as Snapshot;
   } catch {
@@ -53,21 +57,13 @@ function initials(name: string): string {
   return name.split(/\s+/).map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
 
-// Real current date (handover rule 5). Kept in one place so it's easy to freeze
-// for tests later.
-function today(): Date {
-  return new Date();
-}
-
-function build(): { members: TeamMember[]; all: TeamMember[]; info: TeamInfo } {
-  if (cache) return cache;
-  const snap = readSnapshot();
+async function build() {
+  const snap = await loadSnapshot();
   if (!snap) {
-    cache = { members: [], all: [], info: { source: "none", org: "NS Family Services", generatedAt: null } };
-    return cache;
+    return { members: [], all: [], info: { source: "none", org: "NS Family Services", generatedAt: null } as TeamInfo };
   }
 
-  const now = today();
+  const now = new Date(); // real current date (handover rule 5)
   const all = snap.people.map((p): TeamMember => ({
     id: p.pcoId,
     name: p.name,
@@ -77,39 +73,37 @@ function build(): { members: TeamMember[]; all: TeamMember[]; info: TeamInfo } {
     initials: initials(p.name),
     assessment: assess(p.events, now, 26),
   }));
-  // The team/dashboard works with people who served in the last fortnight; a
-  // person's OWN profile must resolve even if they're currently resting.
   const members = all.filter((m) => m.assessment.recentlyActive);
+  return { members, all, info: { source: "planning-center", org: snap.org, generatedAt: snap.generatedAt } as TeamInfo };
+}
 
-  cache = {
-    members,
-    all,
-    info: { source: "planning-center", org: snap.org, generatedAt: snap.generatedAt },
-  };
+function load() {
+  if (!cache) cache = build();
   return cache;
 }
 
-export function getTeam(): TeamMember[] {
-  return build().members;
+export async function getTeam(): Promise<TeamMember[]> {
+  return (await load()).members;
 }
-export function getTeamInfo(): TeamInfo {
-  return build().info;
+export async function getTeamInfo(): Promise<TeamInfo> {
+  return (await load()).info;
 }
-export function getMember(id: string): TeamMember | undefined {
-  return build().all.find((m) => m.id === id);
+export async function getMember(id: string): Promise<TeamMember | undefined> {
+  return (await load()).all.find((m) => m.id === id);
+}
+
+export async function isRecentlyActiveMember(id: string): Promise<boolean> {
+  const m = (await load()).all.find((x) => x.id === id);
+  return !!m?.assessment.recentlyActive;
 }
 
 const SEV: Record<string, number> = { elevated: 3, watch: 2, steady: 1 };
 
 /** People worth a check-in (flagged), highest concern first. */
-export function getFlagged(members: TeamMember[] = getTeam()): TeamMember[] {
+export function getFlagged(members: TeamMember[]): TeamMember[] {
   return members
     .filter((m) => m.assessment.status !== "steady")
-    .sort(
-      (a, b) =>
-        SEV[b.assessment.status] - SEV[a.assessment.status] ||
-        b.assessment.streakWeeks - a.assessment.streakWeeks,
-    );
+    .sort((a, b) => SEV[b.assessment.status] - SEV[a.assessment.status] || b.assessment.streakWeeks - a.assessment.streakWeeks);
 }
 
 export interface TeamGroup {
@@ -128,23 +122,12 @@ const TEAM_EMOJI: { match: RegExp; emoji: string }[] = [
   { match: /cafe|kitchen|coffee|hospitalit/i, emoji: "☕" },
   { match: /online|stream/i, emoji: "💻" },
 ];
-
 function emojiFor(team: string): string {
   return TEAM_EMOJI.find((t) => t.match.test(team))?.emoji ?? "✨";
 }
 
-/** One team by name (exact match), or undefined. Includes small teams too. */
-export function getTeamGroupByName(name: string): TeamGroup | undefined {
-  const ms = getTeam().filter((m) => m.team === name);
-  if (ms.length === 0) return undefined;
-  const flagged = ms.filter((m) => m.assessment.status !== "steady").length;
-  const hasElevated = ms.some((m) => m.assessment.status === "elevated");
-  const status = hasElevated ? "elevated" : flagged > 0 ? "watch" : "steady";
-  return { team: name, emoji: emojiFor(name), members: ms, flagged, status };
-}
-
 /** Groups members by team, worst-status teams first. */
-export function getTeamGroups(members: TeamMember[] = getTeam()): TeamGroup[] {
+export function getTeamGroups(members: TeamMember[]): TeamGroup[] {
   const map = new Map<string, TeamMember[]>();
   for (const m of members) {
     const g = map.get(m.team) ?? [];
@@ -160,4 +143,14 @@ export function getTeamGroups(members: TeamMember[] = getTeam()): TeamGroup[] {
     })
     .filter((g) => g.members.length >= 2)
     .sort((a, b) => SEV[b.status] - SEV[a.status] || b.flagged - a.flagged);
+}
+
+/** One team by name (exact match), or undefined. Includes small teams too. */
+export async function getTeamGroupByName(name: string): Promise<TeamGroup | undefined> {
+  const members = (await load()).members.filter((m) => m.team === name);
+  if (members.length === 0) return undefined;
+  const flagged = members.filter((m) => m.assessment.status !== "steady").length;
+  const hasElevated = members.some((m) => m.assessment.status === "elevated");
+  const status = hasElevated ? "elevated" : flagged > 0 ? "watch" : "steady";
+  return { team: name, emoji: emojiFor(name), members, flagged, status };
 }

@@ -1,142 +1,108 @@
-// Database schema (Drizzle / Postgres).
-//
-// Designed so that the privacy architecture is enforceable at the data layer,
-// not just in the UI: pulse responses are keyed by a pseudonymous `participant`
-// handle, and the mapping from a real person to that handle lives in a separate
-// table that only the pseudonymiser (server, with the salt) can reproduce.
-//
-// Multi-tenant-aware from day one (every row carries an `orgId`) even though the
-// pilot is a single church — cheaper now than a migration later.
+// Database schema (Drizzle / Postgres) — matches the current app model.
+// Single-tenant for the NS Family Services pilot. Load is read from Planning
+// Center; feeling from pulse check-ins; setlists power Song Intelligence; users
+// drive auth + roles. Kept deliberately flat and idempotent (natural keys on the
+// Planning Center ids) so re-syncs upsert cleanly.
 
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   date,
   index,
   integer,
-  pgEnum,
+  jsonb,
   pgTable,
-  real,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const serviceTypeKey = pgEnum("service_type_key", [
-  "sunday_am",
-  "sunday_pm",
-  "wednesday_night",
-]);
-export const scheduleStatus = pgEnum("schedule_status", [
-  "confirmed",
-  "unconfirmed",
-  "declined",
-]);
-export const viewerRole = pgEnum("viewer_role", [
-  "team_member",
-  "team_lead",
-  "pastoral_care",
-]);
-
-export const organisations = pgTable("organisations", {
-  id: uuid("id").primaryKey().defaultRandom(),
+/** People, keyed by their Planning Center person id. */
+export const people = pgTable("people", {
+  pcoId: text("pco_id").primaryKey(),
   name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  handle: text("handle").notNull(), // pseudonym for aggregate/lead views
+  team: text("team").notNull().default("Unassigned"),
+  role: text("role").notNull().default("Team"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const people = pgTable(
-  "people",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    orgId: uuid("org_id").notNull().references(() => organisations.id),
-    // The Planning Center person id (source of truth for identity).
-    pcoPersonId: text("pco_person_id").notNull(),
-    fullName: text("full_name").notNull(),
-    role: viewerRole("role").notNull().default("team_member"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (t) => [uniqueIndex("people_pco_uq").on(t.orgId, t.pcoPersonId)],
-);
-
-export const serviceTypes = pgTable("service_types", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  orgId: uuid("org_id").notNull().references(() => organisations.id),
-  pcoServiceTypeId: text("pco_service_type_id").notNull(),
-  key: serviceTypeKey("key").notNull(),
-  name: text("name").notNull(),
-});
-
-/** One serving assignment on one dated service — the atomic load unit. */
+/** One serving assignment on one dated service. Dedupe-by-planId happens in the
+ *  engine; here we keep every (person, plan, position) row for fidelity. */
 export const servingEvents = pgTable(
   "serving_events",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    orgId: uuid("org_id").notNull().references(() => organisations.id),
-    personId: uuid("person_id").notNull().references(() => people.id),
-    serviceType: serviceTypeKey("service_type").notNull(),
+    pcoId: text("pco_id").notNull().references(() => people.pcoId, { onDelete: "cascade" }),
+    serviceType: text("service_type").notNull(),
     serviceDate: date("service_date").notNull(),
-    status: scheduleStatus("status").notNull(),
-    position: text("position"),
-    roleWeight: real("role_weight").default(1),
-    // Idempotency key from PCO (plan_person id) so re-syncs don't duplicate.
-    pcoPlanPersonId: text("pco_plan_person_id"),
+    planId: text("plan_id").notNull(),
+    status: text("status").notNull(),
+    position: text("position").notNull().default(""),
   },
   (t) => [
-    index("serving_person_date_idx").on(t.personId, t.serviceDate),
-    uniqueIndex("serving_pco_uq").on(t.orgId, t.pcoPlanPersonId),
+    index("serving_person_date_idx").on(t.pcoId, t.serviceDate),
+    uniqueIndex("serving_natural_uq").on(t.pcoId, t.planId, t.position),
   ],
 );
 
-/**
- * Maps a person to their stable pseudonymous handle. This is the ONLY table
- * that links identity to pulse data; unlocking an individual means joining
- * through here, which the app gates behind role + risk threshold.
- */
-export const pseudonyms = pgTable(
-  "pseudonyms",
+/** One service's setlist header + worship leader. */
+export const songServices = pgTable("song_services", {
+  planId: text("plan_id").primaryKey(),
+  serviceDate: date("service_date").notNull(),
+  serviceType: text("service_type").notNull(),
+  leader: text("leader"),
+});
+
+/** Songs within a setlist. Replaced wholesale per plan on sync. */
+export const songSlots = pgTable(
+  "song_slots",
   {
-    orgId: uuid("org_id").notNull().references(() => organisations.id),
-    personId: uuid("person_id").notNull().references(() => people.id),
-    participantHandle: text("participant_handle").notNull(),
+    id: uuid("id").primaryKey().defaultRandom(),
+    planId: text("plan_id").notNull().references(() => songServices.planId, { onDelete: "cascade" }),
+    songId: text("song_id").notNull().default(""),
+    title: text("title").notNull(),
+    author: text("author").notNull().default(""),
+    keyName: text("key_name").notNull().default(""),
+    bpm: integer("bpm"),
+    position: integer("position").notNull().default(0),
   },
-  (t) => [
-    uniqueIndex("pseudonym_person_uq").on(t.personId),
-    uniqueIndex("pseudonym_handle_uq").on(t.orgId, t.participantHandle),
-  ],
+  (t) => [index("song_slot_plan_idx").on(t.planId)],
 );
 
-/** Post-service pulse — stored against the handle, never the person directly. */
+/** Post-service pulse (the four handover questions). Stored by person id for now;
+ *  aggregate views read it pseudonymously. */
 export const pulseResponses = pgTable(
   "pulse_responses",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    orgId: uuid("org_id").notNull().references(() => organisations.id),
-    participantHandle: text("participant_handle").notNull(),
-    serviceDate: date("service_date").notNull(),
-    energy: integer("energy").notNull(),
-    meaning: integer("meaning").notNull(),
-    connection: integer("connection").notNull(),
-    note: text("note"),
+    pcoId: text("pco_id"),
+    service: text("service"),
+    serviceDate: date("service_date"),
+    energy: text("energy").notNull(), // more / same / less
+    worshipOrWork: text("worship_or_work").notNull(),
+    word: text("word"),
+    thanks: text("thanks"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (t) => [index("pulse_handle_date_idx").on(t.participantHandle, t.serviceDate)],
+  (t) => [index("pulse_pco_idx").on(t.pcoId)],
 );
 
-/** Audit log: every time an individual is unlocked, we record who and why. */
-export const unlockEvents = pgTable("unlock_events", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  orgId: uuid("org_id").notNull().references(() => organisations.id),
-  viewerPersonId: uuid("viewer_person_id").notNull().references(() => people.id),
-  subjectPersonId: uuid("subject_person_id").notNull().references(() => people.id),
-  reason: text("reason").notNull(),
-  attentionLevel: text("attention_level").notNull(),
-  createdAt: timestamp("created_at")
-    .default(sql`now()`)
-    .notNull(),
+/** App accounts. role: admin | leader | member. personId links to a person. */
+export const users = pgTable("users", {
+  email: text("email").primaryKey(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("member"),
+  personId: text("person_id"),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const peopleRelations = relations(people, ({ one, many }) => ({
-  org: one(organisations, { fields: [people.orgId], references: [organisations.id] }),
-  events: many(servingEvents),
-  pseudonym: one(pseudonyms, { fields: [people.id], references: [pseudonyms.personId] }),
-}));
+/** Sync bookkeeping (last run + counts) per source. */
+export const syncState = pgTable("sync_state", {
+  key: text("key").primaryKey(), // 'roster' | 'songs'
+  lastSyncedAt: timestamp("last_synced_at")
+    .default(sql`now()`)
+    .notNull(),
+  meta: jsonb("meta"),
+});

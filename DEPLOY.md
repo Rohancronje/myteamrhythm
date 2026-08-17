@@ -37,22 +37,23 @@ Never commit these. `.env.local` is git-ignored.
 Point `churchteamconnect.com` at Vercel (Vercel → Domains → add → follow the DNS
 records). HTTPS is automatic.
 
-## 4. Data persistence — the one real deploy task
+## 4. Data persistence — DONE (Supabase Postgres)
 
-Right now the app reads local `.data/*.json` snapshots written by the sync
-scripts. **Vercel's runtime filesystem is ephemeral**, so those snapshots won't
-work in production. Before/at deploy, move the data into Postgres:
+The data layer is wired to Postgres:
+- Schema in `src/db/schema.ts`; migration applied (`drizzle/0000_*.sql`).
+- Sync scripts (`pco-sync`, `pco-songs-sync`) upsert into Postgres when
+  `DATABASE_URL` is set; `db-seed.ts` backfills from a snapshot without a
+  Planning Center round-trip.
+- The data source (`src/lib/data/team.ts`, `songs.ts`) and auth
+  (`src/lib/auth/users.ts`) read from Postgres when `DATABASE_URL` is set, and
+  fall back to the local snapshot / `AUTH_USERS` env when it isn't.
 
-1. Create a free Supabase project → copy the connection string into `DATABASE_URL`.
-2. Generate + run the schema: `pnpm drizzle-kit generate && pnpm drizzle-kit migrate`
-   (schema already defined in `src/db/schema.ts`).
-3. Point the sync scripts at the DB (upsert people / serving_events / songs) and
-   the data source at the DB instead of the JSON snapshot.
-4. Schedule the sync with **Vercel Cron** (nightly) so the roster + setlists stay
-   fresh.
+Set on Vercel:
+- `DATABASE_URL` → Supabase **transaction pooler** (`:6543`) for the app runtime.
+- `DATABASE_URL_SESSION` → Supabase **session pooler** (`:5432`) for migrations.
 
-This Postgres step is also the foundation for the planned user profiles and
-messaging, so it is not throwaway work.
+Keep data fresh with **Vercel Cron** (nightly) hitting a sync route, or run the
+sync scripts on a schedule.
 
 ## 5. Deploy
 

@@ -1,9 +1,9 @@
-// User store. Seeded from the AUTH_USERS env var (JSON) so no database is needed
-// to start; moves to Supabase/Postgres when messaging arrives. Passwords are
+// User store. Reads from Postgres when DATABASE_URL is set, otherwise from the
+// AUTH_USERS env var (so no database is needed to start). Passwords are
 // scrypt-hashed — plaintext never touches disk or the repo.
 //
 // AUTH_USERS format (one line of JSON):
-//   [{"email":"a@b.com","name":"Rohan","role":"admin","hash":"scrypt$salt$hex"}]
+//   [{"email":"a@b.com","name":"Rohan","role":"admin","personId":"123","hash":"scrypt:salt:hex"}]
 
 import { scryptSync, timingSafeEqual } from "node:crypto";
 import type { Role, SessionUser } from "./session";
@@ -12,11 +12,11 @@ interface StoredUser {
   email: string;
   name: string;
   role: Role;
-  personId?: string; // Planning Center person id → their own profile
+  personId?: string | null;
   hash: string; // scrypt:<saltHex>:<hashHex>  (":" not "$" — .env expands $)
 }
 
-function loadUsers(): StoredUser[] {
+function loadEnvUsers(): StoredUser[] {
   const raw = process.env.AUTH_USERS;
   if (!raw) return [];
   try {
@@ -25,6 +25,20 @@ function loadUsers(): StoredUser[] {
   } catch {
     return [];
   }
+}
+
+async function findUser(email: string): Promise<StoredUser | null> {
+  const target = email.trim().toLowerCase();
+  if (process.env.DATABASE_URL) {
+    const { getDb } = await import("@/db");
+    const { users } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const rows = await getDb().select().from(users).where(eq(users.email, target));
+    const u = rows[0];
+    if (!u) return null;
+    return { email: u.email, name: u.name, role: u.role as Role, personId: u.personId, hash: u.passwordHash };
+  }
+  return loadEnvUsers().find((u) => u.email.trim().toLowerCase() === target) ?? null;
 }
 
 function verifyPassword(password: string, stored: string): boolean {
@@ -36,14 +50,9 @@ function verifyPassword(password: string, stored: string): boolean {
 }
 
 /** Returns the user on a correct email+password match, else null. */
-export function verifyCredentials(email: string, password: string): SessionUser | null {
-  const target = email.trim().toLowerCase();
-  const user = loadUsers().find((u) => u.email.trim().toLowerCase() === target);
+export async function verifyCredentials(email: string, password: string): Promise<SessionUser | null> {
+  const user = await findUser(email);
   if (!user) return null;
   if (!verifyPassword(password, user.hash)) return null;
-  return { email: user.email, name: user.name, role: user.role, personId: user.personId };
-}
-
-export function hasAnyUsers(): boolean {
-  return loadUsers().length > 0;
+  return { email: user.email, name: user.name, role: user.role, personId: user.personId ?? undefined };
 }

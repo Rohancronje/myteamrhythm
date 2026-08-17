@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
-import { getTeamGroups } from "@/lib/data/team";
+import { getTeam, getTeamGroups } from "@/lib/data/team";
 import { STATUS_META } from "@/lib/rhythm/status";
 
 export const dynamic = "force-dynamic";
@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 // members listed underneath with their plain-language reason. Steady members stay
 // collapsed to a count — never the same visual weight as a flagged one.
 
-export default function TeamsPage() {
-  const groups = getTeamGroups();
+export default async function TeamsPage() {
+  const groups = getTeamGroups(await getTeam());
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">

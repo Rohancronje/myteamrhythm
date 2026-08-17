@@ -27,7 +27,7 @@ export default async function PersonPage({ params }: PageProps<"/journey/[id]">)
     redirect(session.personId ? `/journey/${session.personId}` : "/pulse");
   }
 
-  const m = getMember(id);
+  const m = await getMember(id);
   if (!m) notFound();
 
   const a = m.assessment;

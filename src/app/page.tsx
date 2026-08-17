@@ -14,8 +14,8 @@ export default async function Home() {
   if (session && session.role !== "admin") {
     redirect(session.personId ? `/journey/${session.personId}` : "/pulse");
   }
-  const members = getTeam();
-  const info = getTeamInfo();
+  const members = await getTeam();
+  const info = await getTeamInfo();
   const flagged = getFlagged(members);
   const groups = getTeamGroups(members);
 

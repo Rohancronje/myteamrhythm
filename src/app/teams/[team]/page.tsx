@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function TeamDetailPage({ params }: PageProps<"/teams/[team]">) {
   const { team } = await params;
   const name = decodeURIComponent(team);
-  const g = getTeamGroupByName(name);
+  const g = await getTeamGroupByName(name);
   if (!g) notFound();
 
   const meta = STATUS_META[g.status];

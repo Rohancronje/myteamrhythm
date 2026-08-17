@@ -1,19 +1,28 @@
-// Song Intelligence data source. Reads the setlist snapshot; returns computed
-// intel or null when nothing is synced (honest empty state).
+// Song Intelligence data source. Reads from Postgres when DATABASE_URL is set,
+// otherwise the local snapshot; returns computed intel or null (honest empty).
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildSongIntel, type SongIntel, type SongsSnapshot } from "@/lib/songs/intel";
 
-let cache: SongIntel | null | undefined;
+let cache: Promise<SongIntel | null> | null = null;
 
-export function getSongIntel(): SongIntel | null {
-  if (cache !== undefined) return cache;
+async function loadSnapshot(): Promise<SongsSnapshot | null> {
+  if (process.env.DATABASE_URL) {
+    const { readSongsSnapshot } = await import("@/db/read");
+    const snap = (await readSongsSnapshot()) as SongsSnapshot;
+    return snap.services.length ? snap : null;
+  }
   try {
-    const raw = readFileSync(join(process.cwd(), ".data", "pco-songs.json"), "utf8");
-    cache = buildSongIntel(JSON.parse(raw) as SongsSnapshot);
+    return JSON.parse(readFileSync(join(process.cwd(), ".data", "pco-songs.json"), "utf8")) as SongsSnapshot;
   } catch {
-    cache = null;
+    return null;
+  }
+}
+
+export async function getSongIntel(): Promise<SongIntel | null> {
+  if (!cache) {
+    cache = loadSnapshot().then((snap) => (snap ? buildSongIntel(snap) : null));
   }
   return cache;
 }

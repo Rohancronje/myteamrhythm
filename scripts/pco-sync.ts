@@ -90,8 +90,22 @@ function mode<T>(xs: T[]): T | undefined {
 
   mkdirSync(".data", { recursive: true });
   writeFileSync(".data/pco-snapshot.json", JSON.stringify(snapshot, null, 2));
-  console.log(
-    `\n✓ Wrote .data/pco-snapshot.json — ${people.length} volunteers, ${rows.length} assignments.`,
-  );
-  console.log("The app will now show real (pseudonymous) NS Family Services data.");
+  console.log(`\n✓ Wrote .data/pco-snapshot.json — ${people.length} volunteers, ${rows.length} assignments.`);
+
+  if (process.env.DATABASE_URL) {
+    const { writeRoster } = await import("../src/db/writers");
+    const personRows = people.map((p) => ({ pcoId: p.pcoId, name: p.name, handle: p.handle, team: p.team, role: p.role }));
+    const seen = new Set<string>();
+    const eventRows = rows
+      .map((r) => ({ pcoId: r.personId, serviceType: r.serviceType, serviceDate: r.date, planId: r.planId, status: r.status, position: r.position || "" }))
+      .filter((e) => {
+        const k = `${e.pcoId}|${e.planId}|${e.position}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+    await writeRoster(personRows, eventRows, { windowWeeks: WEEKS, people: personRows.length, assignments: eventRows.length });
+    console.log(`✓ Wrote ${personRows.length} people + ${eventRows.length} events to Postgres.`);
+  }
+  process.exit(0);
 })();

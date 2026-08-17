@@ -26,7 +26,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid" }, { status: 400 });
   }
 
-  // TODO: resolve token → participantHandle, then insert into pulse_responses.
-  // Deliberately NOT logging the note or any identifying detail here.
+  if (process.env.DATABASE_URL) {
+    try {
+      const { getDb } = await import("@/db");
+      const { pulseResponses } = await import("@/db/schema");
+      const p = parsed.data;
+      await getDb().insert(pulseResponses).values({
+        service: p.service ?? null,
+        serviceDate: new Date().toISOString().slice(0, 10),
+        energy: p.energy,
+        worshipOrWork: p.worshipOrWork,
+        word: p.word ?? null,
+        thanks: p.thanks ?? null,
+      });
+    } catch {
+      // Optimistic ack: a failed write must never make someone feel their honesty
+      // was rejected. Surface nothing identifying on error.
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
