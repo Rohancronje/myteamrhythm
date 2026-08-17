@@ -1,11 +1,14 @@
 import { Wordmark } from "@/components/Wordmark";
 import { BottomNav } from "@/components/BottomNav";
+import { AccountMenu } from "@/components/AccountMenu";
 import { HomeScreen, type Story, type TeamCard } from "@/components/HomeScreen";
 import { getTeam, getTeamInfo, getFlagged, getTeamGroups } from "@/lib/data/team";
+import { getSession } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
+export default async function Home() {
+  const session = await getSession();
   const members = getTeam();
   const info = getTeamInfo();
   const flagged = getFlagged(members);
@@ -46,15 +49,21 @@ export default function Home() {
       <header className="rise mb-7 flex items-center justify-between">
         <div>
           <Wordmark />
-          <p className="mt-1.5 text-sm text-mute">{greeting} · NS Family Services</p>
+          <p className="mt-1.5 text-sm text-mute">
+            {greeting}{session ? `, ${session.name.split(" ")[0]}` : ""} · NS Family Services
+          </p>
         </div>
-        <span
-          className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs"
-          style={{ color: info.source === "planning-center" ? "var(--color-mint)" : "var(--color-faint)" }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: info.source === "planning-center" ? "var(--color-mint)" : "var(--color-faint)" }} />
-          {info.source === "planning-center" ? "Live" : "No data"}
-        </span>
+        {session ? (
+          <AccountMenu name={session.name} role={session.role} />
+        ) : (
+          <span
+            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs"
+            style={{ color: info.source === "planning-center" ? "var(--color-mint)" : "var(--color-faint)" }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: info.source === "planning-center" ? "var(--color-mint)" : "var(--color-faint)" }} />
+            {info.source === "planning-center" ? "Live" : "No data"}
+          </span>
+        )}
       </header>
 
       {info.source === "none" ? (
