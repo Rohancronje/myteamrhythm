@@ -1,5 +1,6 @@
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
+import { AccountChip } from "@/components/AccountChip";
 import { getSongIntel } from "@/lib/data/songs";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function SongsPage() {
           <Wordmark />
           <p className="mt-1.5 text-sm text-mute">Song Intelligence</p>
         </div>
+        <AccountChip />
       </header>
 
       {!intel ? (

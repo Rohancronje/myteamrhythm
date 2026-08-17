@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
+import { AccountChip } from "@/components/AccountChip";
 import { getTeam, getTeamGroups } from "@/lib/data/team";
 import { STATUS_META } from "@/lib/rhythm/status";
 
@@ -20,6 +21,7 @@ export default async function TeamsPage() {
           <Wordmark />
           <p className="mt-1.5 text-sm text-mute">Teams · by concern</p>
         </div>
+        <AccountChip />
       </header>
 
       <div className="space-y-4">

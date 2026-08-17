@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
-import { AccountMenu } from "@/components/AccountMenu";
+import { AccountChip } from "@/components/AccountChip";
 import { HomeScreen, type Story, type TeamCard } from "@/components/HomeScreen";
 import { getTeam, getTeamInfo, getFlagged, getTeamGroups } from "@/lib/data/team";
 import { getSession } from "@/lib/auth/server";
@@ -59,17 +59,7 @@ export default async function Home() {
             {greeting}{session ? `, ${session.name.split(" ")[0]}` : ""} · NS Family Services
           </p>
         </div>
-        {session ? (
-          <AccountMenu name={session.name} role={session.role} />
-        ) : (
-          <span
-            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs"
-            style={{ color: info.source === "planning-center" ? "var(--color-mint)" : "var(--color-faint)" }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: info.source === "planning-center" ? "var(--color-mint)" : "var(--color-faint)" }} />
-            {info.source === "planning-center" ? "Live" : "No data"}
-          </span>
-        )}
+        <AccountChip />
       </header>
 
       {info.source === "none" ? (

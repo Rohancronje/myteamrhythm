@@ -103,7 +103,7 @@ export default async function PersonPage({ params }: PageProps<"/journey/[id]">)
       </section>
 
       {/* Care notes — pastoral only, never shown to the person themselves */}
-      {isAdmin && (
+      {isAdmin && !isSelf && (
         <section className="rise mt-4 rounded-[var(--radius-card)] border border-dashed border-border-strong p-6" style={{ animationDelay: "200ms" }}>
           <h2 className="text-sm font-medium text-text">Care notes</h2>
           <p className="mt-2 text-sm text-mute">Empty. Notes are added by pastoral leads after a real conversation — never auto-filled.</p>
@@ -111,7 +111,9 @@ export default async function PersonPage({ params }: PageProps<"/journey/[id]">)
       )}
 
       <p className="mt-6 text-center text-xs text-faint">
-        {isAdmin ? "This view is pastoral. Rhythm is a mirror, not a microscope." : "This is your own view. Only pastoral care can see it too."}
+        {isSelf
+          ? "This is your own view. Only pastoral care can see it too."
+          : "This view is pastoral. Rhythm is a mirror, not a microscope."}
       </p>
 
       <AppNav />

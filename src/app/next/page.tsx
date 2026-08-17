@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
+import { AccountChip } from "@/components/AccountChip";
 import { NextService } from "@/components/NextService";
 import { getSession } from "@/lib/auth/server";
 import { getNextServiceForPerson, getNextServiceOverall } from "@/lib/data/upcoming";
@@ -20,9 +20,7 @@ export default async function NextPage() {
           <Wordmark />
           <p className="mt-1.5 text-sm text-mute">{personal ? "Your next service" : "Next service"}</p>
         </div>
-        <Link href="/pulse" className="rounded-full border border-border bg-surface-solid px-4 py-2 text-xs font-medium text-mute transition-colors hover:text-text">
-          Check-in →
-        </Link>
+        <AccountChip />
       </header>
 
       {service ? (

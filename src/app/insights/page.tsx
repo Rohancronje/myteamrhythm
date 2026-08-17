@@ -1,5 +1,6 @@
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
+import { AccountChip } from "@/components/AccountChip";
 import { getTeam, getTeamInfo } from "@/lib/data/team";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +18,12 @@ export default async function InsightsPage() {
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
-      <header className="rise mb-6">
-        <Wordmark />
-        <p className="mt-1.5 text-sm text-mute">Insights · {info.org}</p>
+      <header className="rise mb-6 flex items-center justify-between">
+        <div>
+          <Wordmark />
+          <p className="mt-1.5 text-sm text-mute">Insights · {info.org}</p>
+        </div>
+        <AccountChip />
       </header>
 
       <section className="rise glass rounded-[var(--radius-card)] p-6">
