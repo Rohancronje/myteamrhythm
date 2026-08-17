@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
 import { RhythmLine } from "@/components/RhythmLine";
-import { getPerson } from "@/lib/data/seed";
+import { getTeamPerson } from "@/lib/data/source";
 import { ATTENTION_META, ZONE_META } from "@/lib/rhythm/presentation";
+
+export const dynamic = "force-dynamic";
 
 // A person's own serving journey. The counter-weight to surveillance: the same
 // data, returned to the person it belongs to, told as encouragement. Reached by
@@ -11,7 +13,7 @@ import { ATTENTION_META, ZONE_META } from "@/lib/rhythm/presentation";
 
 export default async function JourneyPage({ params }: PageProps<"/journey/[id]">) {
   const { id } = await params;
-  const p = getPerson(id);
+  const p = getTeamPerson(id);
   if (!p) notFound();
 
   const { person, rhythm, trend, signal } = p;

@@ -112,14 +112,69 @@ export class PcoClient {
   }
 
   /**
+   * Lists past plans for a service type back to `sinceISO`. Plans come newest
+   * first; we stop paging once we pass the cutoff. `filter=past` keeps us to
+   * services that have actually happened (real load, not future schedule).
+   */
+  async listPastPlans(serviceTypeId: string, sinceISO: string) {
+    const plans: { id: string; date: string }[] = [];
+    let next: string | undefined =
+      `/service_types/${serviceTypeId}/plans?filter=past&order=-sort_date&per_page=50`;
+
+    outer: while (next) {
+      const page: JsonApiPage = await this.get(next);
+      for (const plan of page.data) {
+        const date = (plan.attributes.sort_date as string | null)?.slice(0, 10);
+        if (!date) continue;
+        if (date < sinceISO) break outer; // ordered desc — nothing older matters
+        plans.push({ id: plan.id, date });
+      }
+      next = page.links?.next;
+    }
+    return plans;
+  }
+
+  /** Team members (PlanPerson rows) for one plan, with person + team side-loaded. */
+  async planTeamMembers(serviceTypeId: string, planId: string) {
+    const { data, included } = await this.getAll(
+      `/service_types/${serviceTypeId}/plans/${planId}/team_members?include=person,team&per_page=100`,
+    );
+    const people = new Map(
+      included
+        .filter((r) => r.type === "Person")
+        .map((r) => [r.id, r.attributes.full_name as string]),
+    );
+    const teams = new Map(
+      included
+        .filter((r) => r.type === "Team")
+        .map((r) => [r.id, r.attributes.name as string]),
+    );
+    return data.map((m) => {
+      const pid = m.relationships?.person?.data?.id ?? "";
+      const tid = m.relationships?.team?.data?.id ?? "";
+      return {
+        personId: pid,
+        personName: people.get(pid) ?? "Unknown",
+        team: teams.get(tid) ?? "Unassigned",
+        status: normaliseStatus(m.attributes.status as string),
+        position: (m.attributes.team_position_name as string) ?? "",
+      };
+    });
+  }
+
+  /**
    * Pulls scheduled assignments (the core load signal) across all mapped service
    * types since `since`. Returns normalised ServingEvent-shaped rows, leaving the
    * personId as the raw PCO id for the caller to pseudonymise.
    */
-  async fetchScheduledSince(sinceISO: string) {
+  async fetchScheduledSince(
+    sinceISO: string,
+    onProgress?: (msg: string) => void,
+  ) {
     const results: {
       personId: string;
       personName: string;
+      team: string;
       serviceType: ServiceTypeKey;
       date: string;
       status: ScheduleStatus;
@@ -127,38 +182,20 @@ export class PcoClient {
     }[] = [];
 
     for (const [pcoId, key] of Object.entries(this.config.serviceTypeMap)) {
-      // plans filtered by date, with team members side-loaded.
-      const path =
-        `/service_types/${pcoId}/plans?filter=after&after=${sinceISO}` +
-        `&include=team_members&per_page=100`;
-      const { data, included } = await this.getAll(path);
-
-      const people = new Map(
-        included
-          .filter((r) => r.type === "Person")
-          .map((r) => [r.id, r.attributes.full_name as string]),
-      );
-
-      for (const plan of data) {
-        const date = (plan.attributes.sort_date as string)?.slice(0, 10);
-        if (!date) continue;
-        // team_members for this plan come through /plans/:id/team_members; here we
-        // read the side-loaded PlanPerson rows.
-        const members = included.filter(
-          (r) =>
-            r.type === "PlanPerson" &&
-            r.relationships?.plan?.data?.id === plan.id,
-        );
+      const plans = await this.listPastPlans(pcoId, sinceISO);
+      onProgress?.(`${key}: ${plans.length} plans since ${sinceISO}`);
+      for (const plan of plans) {
+        const members = await this.planTeamMembers(pcoId, plan.id);
         for (const m of members) {
-          const personId = m.relationships?.person?.data?.id;
-          if (!personId) continue;
+          if (!m.personId) continue;
           results.push({
-            personId,
-            personName: people.get(personId) ?? "Unknown",
+            personId: m.personId,
+            personName: m.personName,
+            team: m.team,
             serviceType: key,
-            date,
-            status: normaliseStatus(m.attributes.status as string),
-            position: (m.attributes.team_position_name as string) ?? "",
+            date: plan.date,
+            status: m.status,
+            position: m.position,
           });
         }
       }

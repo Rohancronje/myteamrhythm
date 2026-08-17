@@ -43,3 +43,6 @@ next-env.d.ts
 # local tooling
 .playwright-mcp/
 .npmrc
+
+# real data snapshot (contains names)
+.data/

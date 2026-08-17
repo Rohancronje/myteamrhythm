@@ -44,13 +44,16 @@ function acwrAgo(p: SeededPerson, weeksAgo: number): number | null {
 }
 
 export function buildInsights(data: SeededPerson[], trendWeeks = 12): TeamInsights {
-  // Team load trend: median ACWR across people, per week.
+  // Team load trend: median ACWR among people ACTUALLY SERVING each week. Across
+  // an intermittent-volunteer population, averaging in everyone who's resting that
+  // week just drags the line toward zero and hides the signal.
   const maxLen = Math.max(...data.map((p) => p.rhythm.series.length));
   const loadTrend: { weekStart: string; median: number | null }[] = [];
   for (let i = maxLen - trendWeeks; i < maxLen; i++) {
     if (i < 0) continue;
     const week = data.find((p) => p.rhythm.series[i])?.rhythm.series[i]?.weekStart;
     const vals = data
+      .filter((p) => (p.rhythm.series[i]?.rawLoad ?? 0) > 0)
       .map((p) => p.rhythm.series[i]?.acwr)
       .filter((x): x is number => x != null);
     loadTrend.push({ weekStart: week ?? `${i}`, median: median(vals) });
@@ -99,4 +102,100 @@ export function buildInsights(data: SeededPerson[], trendWeeks = 12): TeamInsigh
     dangerNow,
     dangerPrev,
   };
+}
+
+// ── Cohort breakdown (by team) ────────────────────────────────────────────────
+
+export interface Cohort {
+  team: string;
+  size: number;
+  medianAcwr: number | null;
+  medianFeeling: number | null;
+  /** People in the burnout corner (high load + low feeling). */
+  danger: number;
+  /** Share serving above their baseline (ACWR ≥ 1.1). */
+  elevatedShare: number;
+}
+
+export function buildCohorts(data: SeededPerson[]): Cohort[] {
+  const groups = new Map<string, SeededPerson[]>();
+  for (const p of data) {
+    const g = groups.get(p.person.team) ?? [];
+    g.push(p);
+    groups.set(p.person.team, g);
+  }
+
+  return [...groups.entries()]
+    .map(([team, people]) => {
+      const acwrs = people.map((p) => p.signal.acwr).filter((x): x is number => x != null);
+      const feels = people.map((p) => p.signal.wellbeing).filter((x): x is number => x != null);
+      const danger = people.filter(
+        (p) => p.signal.acwr != null && p.signal.wellbeing != null && p.signal.acwr >= 1.3 && p.signal.wellbeing <= 3,
+      ).length;
+      const elevated = people.filter((p) => (p.signal.acwr ?? 0) >= 1.1).length;
+      return {
+        team,
+        size: people.length,
+        medianAcwr: median(acwrs),
+        medianFeeling: median(feels),
+        danger,
+        elevatedShare: people.length ? elevated / people.length : 0,
+      };
+    })
+    .sort((a, b) => (b.medianAcwr ?? 0) - (a.medianAcwr ?? 0));
+}
+
+// ── Forecast ──────────────────────────────────────────────────────────────────
+
+export interface Forecast {
+  horizonWeeks: number;
+  /** People projected to cross the 1.5× spike line if the trend holds. */
+  projectedSpiking: { id: string; handle: string; current: number; projected: number }[];
+  /** Team median ACWR projected forward. */
+  projectedTeamMedian: number | null;
+}
+
+/** Linear slope of the last `n` non-null ACWR points in a series. */
+function loadSlope(p: SeededPerson, n = 4): { slope: number; last: number } | null {
+  const vals = p.rhythm.series.map((s) => s.acwr).filter((x): x is number => x != null).slice(-n);
+  if (vals.length < 2) return null;
+  const xMean = (vals.length - 1) / 2;
+  const yMean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  let num = 0;
+  let den = 0;
+  vals.forEach((y, i) => {
+    num += (i - xMean) * (y - yMean);
+    den += (i - xMean) ** 2;
+  });
+  return { slope: den === 0 ? 0 : num / den, last: vals[vals.length - 1] };
+}
+
+export function buildForecast(data: SeededPerson[], horizonWeeks = 2): Forecast {
+  const projectedSpiking: Forecast["projectedSpiking"] = [];
+  const projectedNow: number[] = [];
+
+  for (const p of data) {
+    const s = loadSlope(p);
+    if (!s) continue;
+    const projected = s.last + s.slope * horizonWeeks;
+    projectedNow.push(projected);
+    if (projected >= 1.5 && s.last < 1.5) {
+      projectedSpiking.push({
+        id: p.person.id,
+        handle: p.person.handle,
+        current: round2(s.last),
+        projected: round2(projected),
+      });
+    }
+  }
+
+  return {
+    horizonWeeks,
+    projectedSpiking: projectedSpiking.sort((a, b) => b.projected - a.projected),
+    projectedTeamMedian: median(projectedNow),
+  };
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
