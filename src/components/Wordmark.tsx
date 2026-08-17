@@ -4,11 +4,12 @@ export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <span className="font-display text-xl font-bold tracking-tight text-text">Rhythm</span>
-      <svg width="24" height="13" viewBox="0 0 30 16" aria-hidden>
+      <svg width="26" height="14" viewBox="0 0 30 16" aria-hidden style={{ filter: "drop-shadow(0 0 6px rgba(255,92,138,0.55))" }}>
         <defs>
           <linearGradient id="wm" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="#8b6cff" />
-            <stop offset="100%" stopColor="#ff5c8a" />
+            <stop offset="55%" stopColor="#ff5c8a" />
+            <stop offset="100%" stopColor="#ffb454" />
           </linearGradient>
         </defs>
         <path
