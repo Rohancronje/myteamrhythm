@@ -14,7 +14,7 @@ function loadEnv(path: string) {
 }
 loadEnv(".env.local");
 
-const SERIES = "Foundations — Genesis";
+const SERIES = "Genesis";
 const REFS = [
   "Genesis 1:1-25", "Genesis 1:26-2:3", "Genesis 2:4-25", "Genesis 3", "Genesis 4:1-16",
   "Genesis 6:9-22", "Genesis 7", "Genesis 8", "Genesis 9:1-17", "Genesis 11:1-9",

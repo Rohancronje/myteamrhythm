@@ -45,14 +45,17 @@ export default async function TodayPage() {
       {/* Verse of the day */}
       {today ? (
         <section className="rise glass rounded-[var(--radius-card)] p-6">
-          {today.seriesTitle && <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-purple">{today.seriesTitle}</p>}
-          <h1 className="mt-1 font-display text-2xl font-bold text-text">{today.reference}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-purple/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-purple">Proposed plan</span>
+            {today.seriesTitle && <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-mute">{today.seriesTitle}</span>}
+          </div>
+          <h1 className="mt-2 font-display text-2xl font-bold text-text">{today.reference}</h1>
           {passage ? (
             <p className="mt-4 max-h-[46vh] overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed text-mute">{passage.text}</p>
           ) : (
             <p className="mt-4 text-sm text-faint">Couldn&apos;t load the passage right now — try again shortly.</p>
           )}
-          <p className="mt-3 text-[11px] text-faint">World English Bible (public domain)</p>
+          <p className="mt-3 text-[11px] text-faint">World English Bible (public domain) · a proposed plan, not yet confirmed</p>
           <div className="mt-5">
             {session?.personId ? <MarkRead readToday={streak.readToday} /> : <p className="text-center text-xs text-faint">Sign in with your profile to track your reading.</p>}
           </div>
@@ -67,7 +70,7 @@ export default async function TodayPage() {
       {/* Upcoming in the plan */}
       {upcoming.length > 1 && (
         <section className="rise mt-4 glass rounded-[var(--radius-card)] p-5">
-          <h2 className="mb-3 text-sm font-medium text-text">Coming up in {upcoming[0].seriesTitle ?? "the plan"}</h2>
+          <h2 className="mb-3 text-sm font-medium text-text">Coming up · proposed plan</h2>
           <ul className="space-y-2">
             {upcoming.slice(1).map((d) => (
               <li key={d.day} className="flex items-center justify-between text-sm">
