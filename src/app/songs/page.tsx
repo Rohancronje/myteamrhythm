@@ -3,6 +3,7 @@ import { AppNav } from "@/components/AppNav";
 import { AccountChip } from "@/components/AccountChip";
 import Link from "next/link";
 import { getSongIntel } from "@/lib/data/songs";
+import { getSongScriptureMap } from "@/lib/data/songscripture";
 import { getSession } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function SongsPage() {
   const intel = await getSongIntel();
   const session = await getSession();
+  const scripture = await getSongScriptureMap();
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
@@ -83,12 +85,18 @@ export default async function SongsPage() {
             <h2 className="mb-3.5 text-sm font-medium text-mute">In rotation</h2>
             <div className="glass overflow-hidden rounded-[var(--radius-card)]">
               <ul className="divide-y divide-border">
-                {intel.mostSung.slice(0, 8).map((s, i) => (
+                {intel.mostSung.slice(0, 8).map((s, i) => {
+                  const sc = scripture.get(s.title.trim().toLowerCase());
+                  return (
                   <li key={s.title} className="flex items-center gap-3 px-4 py-3">
                     <span className="w-5 shrink-0 text-center font-display text-sm font-bold text-faint">{i + 1}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-text">{s.title}</span>
-                      {s.author && <span className="block truncate text-xs text-faint">{s.author}</span>}
+                      {sc && sc.refs.length > 0 ? (
+                        <span className="block truncate text-xs text-blue">📖 {sc.refs.join(" · ")}</span>
+                      ) : s.author ? (
+                        <span className="block truncate text-xs text-faint">{s.author}</span>
+                      ) : null}
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <span className="rounded-md bg-surface-2 px-1.5 py-0.5 font-display text-xs font-bold text-blue">{s.primaryKey}</span>
@@ -96,7 +104,8 @@ export default async function SongsPage() {
                       <span className="w-8 text-right font-display text-sm font-bold text-text">{s.timesPlayed}×</span>
                     </span>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </div>
           </section>

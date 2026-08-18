@@ -5,6 +5,7 @@ import { NextService } from "@/components/NextService";
 import { getSession } from "@/lib/auth/server";
 import { getNextServiceForPerson, getNextServiceOverall } from "@/lib/data/upcoming";
 import { getThanksFor } from "@/lib/data/thanks";
+import { getSongScriptureMap } from "@/lib/data/songscripture";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function NextPage() {
   const service = mine?.service ?? (await getNextServiceOverall());
   const personal = !!mine;
   const thanks = await getThanksFor(session?.personId);
+  const scriptureByTitle = Object.fromEntries(await getSongScriptureMap());
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
@@ -42,7 +44,7 @@ export default async function NextPage() {
       )}
 
       {service ? (
-        <NextService service={service} myPosition={mine?.myPosition} personal={personal} />
+        <NextService service={service} myPosition={mine?.myPosition} personal={personal} scriptureByTitle={scriptureByTitle} />
       ) : (
         <div className="glass rounded-[var(--radius-card)] p-8 text-center">
           <p className="font-display text-lg text-text">Nothing scheduled yet.</p>

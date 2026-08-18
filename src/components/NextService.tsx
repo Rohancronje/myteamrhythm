@@ -31,10 +31,12 @@ export function NextService({
   service,
   myPosition,
   personal,
+  scriptureByTitle = {},
 }: {
   service: UpcomingService;
   myPosition?: string;
   personal: boolean;
+  scriptureByTitle?: Record<string, { refs: string[]; themes: string[]; status: string }>;
 }) {
   // A person can hold multiple positions on one plan — show each person once,
   // merging their roles, so the count and chips aren't inflated.
@@ -96,14 +98,27 @@ export function NextService({
           </p>
         ) : (
           <ul>
-            {service.songs.map((s, i) => (
-              <li key={s.title + i} className="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-surface-solid font-display text-[11px] font-bold text-purple">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">{s.title}</span>
-                {s.bpm ? <span className="shrink-0 text-xs text-faint">{s.bpm}bpm</span> : null}
-                <span className="shrink-0 rounded-lg bg-purple/15 px-2.5 py-1 font-display text-xs font-bold text-purple">{s.key ? `Key ${s.key}` : "—"}</span>
-              </li>
-            ))}
+            {service.songs.map((s, i) => {
+              const sc = scriptureByTitle[s.title.trim().toLowerCase()];
+              return (
+                <li key={s.title + i} className="border-t border-border py-2.5 first:border-t-0">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-surface-solid font-display text-[11px] font-bold text-purple">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">{s.title}</span>
+                    {s.bpm ? <span className="shrink-0 text-xs text-faint">{s.bpm}bpm</span> : null}
+                    <span className="shrink-0 rounded-lg bg-purple/15 px-2.5 py-1 font-display text-xs font-bold text-purple">{s.key ? `Key ${s.key}` : "—"}</span>
+                  </div>
+                  {sc && sc.refs.length > 0 && (
+                    <div className="ml-9 mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {sc.refs.map((r) => (
+                        <span key={r} className="rounded-md border border-border px-1.5 py-0.5 text-[11px] text-blue">📖 {r}</span>
+                      ))}
+                      {sc.status === "needs_review" && <span className="text-[10px] text-faint">draft</span>}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
