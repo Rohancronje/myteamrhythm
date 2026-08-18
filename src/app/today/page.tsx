@@ -34,8 +34,9 @@ export default async function TodayPage() {
           <div>
             <p className="font-display text-2xl font-bold text-text">{streak.streak}-day streak</p>
             <p className="text-xs text-mute">
-              {streak.readToday ? "You've read today." : "Read today to keep it going."}
-              {streak.graceUsed > 0 ? ` · ${streak.graceUsed} grace ${streak.graceUsed === 1 ? "day" : "days"} used` : ""}
+              {streak.streak === 0 && !streak.readToday
+                ? "Read today to start your streak."
+                : `${streak.readToday ? "You've read today." : "Read today to keep it going."}${streak.streak > 0 && streak.graceUsed > 0 ? ` · ${streak.graceUsed} grace ${streak.graceUsed === 1 ? "day" : "days"} used` : ""}`}
             </p>
           </div>
         </section>
