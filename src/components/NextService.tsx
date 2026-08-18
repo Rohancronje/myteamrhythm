@@ -3,6 +3,7 @@
 
 import { serviceLabel, type UpcomingService } from "@/lib/data/upcoming";
 import { daysFromToday } from "@/lib/time";
+import { ScriptureRefs } from "./ScriptureRefs";
 
 const TZ = "Pacific/Auckland"; // NS Family Services is in NZ
 
@@ -109,11 +110,8 @@ export function NextService({
                     <span className="shrink-0 rounded-lg bg-purple/15 px-2.5 py-1 font-display text-xs font-bold text-purple">{s.key ? `Key ${s.key}` : "—"}</span>
                   </div>
                   {sc && sc.refs.length > 0 && (
-                    <div className="ml-9 mt-1.5 flex flex-wrap items-center gap-1.5">
-                      {sc.refs.map((r) => (
-                        <span key={r} className="rounded-md border border-border px-1.5 py-0.5 text-[11px] text-blue">📖 {r}</span>
-                      ))}
-                      {sc.status === "needs_review" && <span className="text-[10px] text-faint">draft</span>}
+                    <div className="ml-9 mt-1.5">
+                      <ScriptureRefs refs={sc.refs} draft={sc.status === "needs_review"} />
                     </div>
                   )}
                 </li>

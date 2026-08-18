@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getSongIntel } from "@/lib/data/songs";
 import { getSongScriptureMap } from "@/lib/data/songscripture";
 import { getSession } from "@/lib/auth/server";
+import { ScriptureRefs } from "@/components/ScriptureRefs";
 
 export const dynamic = "force-dynamic";
 
@@ -88,17 +89,17 @@ export default async function SongsPage() {
                 {intel.mostSung.slice(0, 8).map((s, i) => {
                   const sc = scripture.get(s.title.trim().toLowerCase());
                   return (
-                  <li key={s.title} className="flex items-center gap-3 px-4 py-3">
-                    <span className="w-5 shrink-0 text-center font-display text-sm font-bold text-faint">{i + 1}</span>
-                    <span className="min-w-0 flex-1">
+                  <li key={s.title} className="flex items-start gap-3 px-4 py-3">
+                    <span className="w-5 shrink-0 pt-0.5 text-center font-display text-sm font-bold text-faint">{i + 1}</span>
+                    <div className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-text">{s.title}</span>
                       {sc && sc.refs.length > 0 ? (
-                        <span className="block truncate text-xs text-blue">📖 {sc.refs.join(" · ")}</span>
+                        <div className="mt-1"><ScriptureRefs refs={sc.refs} draft={sc.status === "needs_review"} /></div>
                       ) : s.author ? (
                         <span className="block truncate text-xs text-faint">{s.author}</span>
                       ) : null}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
+                    </div>
+                    <span className="flex shrink-0 items-center gap-2 pt-0.5">
                       <span className="rounded-md bg-surface-2 px-1.5 py-0.5 font-display text-xs font-bold text-blue">{s.primaryKey}</span>
                       {s.avgBpm && <span className="text-xs text-faint">{s.avgBpm}bpm</span>}
                       <span className="w-8 text-right font-display text-sm font-bold text-text">{s.timesPlayed}×</span>
