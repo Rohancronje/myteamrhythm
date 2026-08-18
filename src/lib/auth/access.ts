@@ -35,26 +35,25 @@ export function navFor(role: Role, personId?: string): NavItem[] {
   if (role === "admin") {
     return [
       { href: "/", label: "Home", icon: "home" },
-      { href: "/today", label: "Today", icon: "today" },
       { href: "/next", label: "Next", icon: "next" },
       { href: "/teams", label: "Teams", icon: "teams" },
       { href: "/songs", label: "Songs", icon: "songs" },
-      { href: "/insights", label: "Insights", icon: "insights" },
+      { href: "/today", label: "Today", icon: "today" },
     ];
   }
   if (role === "leader") {
     return [
-      { href: "/today", label: "Today", icon: "today" },
       { href: "/next", label: "Next", icon: "next" },
       { href: me, label: "Me", icon: "me" },
       { href: "/songs", label: "Songs", icon: "songs" },
+      { href: "/today", label: "Today", icon: "today" },
       { href: "/pulse", label: "Check-in", icon: "check" },
     ];
   }
   return [
-    { href: "/today", label: "Today", icon: "today" },
     { href: "/next", label: "Next", icon: "next" },
     { href: me, label: "Me", icon: "me" },
+    { href: "/today", label: "Today", icon: "today" },
     { href: "/pulse", label: "Check-in", icon: "check" },
   ];
 }

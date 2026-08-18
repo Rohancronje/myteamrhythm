@@ -19,13 +19,12 @@ export default async function NextPage() {
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
-      <header className="rise mb-6 flex items-center justify-between">
-        <div>
-          <Wordmark />
-          <p className="mt-1.5 text-sm text-mute">{personal ? "Your next service" : "Next service"}</p>
-        </div>
+      <header className="rise mb-5 flex items-center justify-between">
+        <Wordmark />
         <AccountChip />
       </header>
+
+      <h1 className="rise mb-5 font-display text-2xl font-bold text-text">{personal ? "Your next service" : "Next service"}</h1>
 
       {thanks.count > 0 && (
         <section className="rise mb-4 overflow-hidden rounded-[var(--radius-card)] p-5" style={{ background: "linear-gradient(135deg, rgba(56,221,155,0.16), rgba(92,194,255,0.1))", border: "1px solid rgba(56,221,155,0.3)" }}>
