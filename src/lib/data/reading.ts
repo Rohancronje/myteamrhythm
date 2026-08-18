@@ -71,22 +71,29 @@ export async function getReadingStreak(pcoId: string | undefined): Promise<Strea
     const rows = await (await db()).select().from(readingMarks).where(eq(readingMarks.pcoId, pcoId));
     const read = new Set(rows.map((r) => r.day));
     const today = nzToday();
+    if (read.size === 0) return { streak: 0, graceUsed: 0, readToday: false };
 
+    // Grace is only spent on gaps BETWEEN reads — never on the empty days before
+    // someone ever started (which would wrongly inflate "grace used").
+    const minRead = [...read].sort()[0];
     let streak = 0;
-    let graceLeft = 2;
+    let freezesLeft = 2;
+    let graceUsed = 0;
     const cursor = new Date(today + "T00:00:00Z");
     for (let i = 0; i < 400; i++) {
       const key = cursor.toISOString().slice(0, 10);
+      if (key < minRead) break; // past all reads
       if (read.has(key)) {
         streak++;
-      } else if (graceLeft > 0) {
-        graceLeft--;
+      } else if (freezesLeft > 0) {
+        freezesLeft--;
+        graceUsed++;
       } else {
         break;
       }
       cursor.setUTCDate(cursor.getUTCDate() - 1);
     }
-    return { streak, graceUsed: 2 - graceLeft, readToday: read.has(today) };
+    return { streak, graceUsed, readToday: read.has(today) };
   } catch {
     return { streak: 0, graceUsed: 0, readToday: false };
   }
