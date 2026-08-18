@@ -1,7 +1,9 @@
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
 import { AccountChip } from "@/components/AccountChip";
+import Link from "next/link";
 import { getSongIntel } from "@/lib/data/songs";
+import { getSession } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SongsPage() {
   const intel = await getSongIntel();
+  const session = await getSession();
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
@@ -20,6 +23,13 @@ export default async function SongsPage() {
         </div>
         <AccountChip />
       </header>
+
+      {session?.role === "admin" && (
+        <Link href="/songs/tag" className="rise mb-4 flex items-center justify-between rounded-2xl border border-border bg-surface-solid px-4 py-3">
+          <span className="text-sm font-medium text-text">Tag songs with themes &amp; scripture</span>
+          <span className="grad-text text-sm font-semibold">Open →</span>
+        </Link>
+      )}
 
       {!intel ? (
         <div className="glass rounded-[var(--radius-card)] p-8 text-center">

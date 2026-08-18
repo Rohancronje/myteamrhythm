@@ -15,7 +15,10 @@ export default async function PulsePage({ searchParams }: PageProps<"/pulse">) {
   const upcoming = await getUpcoming();
   const svc = (plan && upcoming.find((s) => s.planId === plan)) || (await getNextServiceOverall());
   const service = typeof sp.service === "string" ? sp.service : svc ? serviceLabel(svc.serviceType) : "today";
-  const teammates = svc ? [...new Set(svc.roster.map((r) => r.name).filter(Boolean))] : [];
+  const seen = new Set<string>();
+  const teammates = svc
+    ? svc.roster.filter((r) => r.pcoId && r.name && !seen.has(r.pcoId) && seen.add(r.pcoId)).map((r) => ({ pcoId: r.pcoId, name: r.name }))
+    : [];
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-10">

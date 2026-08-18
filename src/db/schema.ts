@@ -109,6 +109,53 @@ export const upcomingServices = pgTable("upcoming_services", {
   data: jsonb("data").notNull(),
 });
 
+/** Peer thank-yous from pulse Q4. Recipient known; sender optional (only if the
+ *  pulse was filled while signed in). Surfaced back to the recipient. */
+export const thankYous = pgTable(
+  "thank_yous",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recipientPcoId: text("recipient_pco_id").notNull(),
+    senderPcoId: text("sender_pco_id"),
+    senderName: text("sender_name"),
+    service: text("service"),
+    serviceDate: date("service_date"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("thanks_recipient_idx").on(t.recipientPcoId)],
+);
+
+/** Team Bible reading plan — one passage per day, tied to a sermon series. */
+export const readingPlan = pgTable("reading_plan", {
+  day: date("day").primaryKey(),
+  reference: text("reference").notNull(), // e.g. "Genesis 1:1-25"
+  seriesTitle: text("series_title"),
+  note: text("note"),
+});
+
+/** Per-person reading marks (which days they read) — drives the reading streak. */
+export const readingMarks = pgTable(
+  "reading_marks",
+  {
+    pcoId: text("pco_id").notNull(),
+    day: date("day").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("reading_mark_uq").on(t.pcoId, t.day)],
+);
+
+/** Song → theme + scripture tagging (backoffice). Lyrics are NEVER stored. */
+export const songTags = pgTable("song_tags", {
+  title: text("title").primaryKey(), // song title (lowercased key)
+  displayTitle: text("display_title").notNull(),
+  themes: jsonb("themes").notNull().default([]),
+  scriptureRefs: jsonb("scripture_refs").notNull().default([]),
+  status: text("status").notNull().default("pending"), // pending | tagged | needs_review
+  taggedBy: text("tagged_by"),
+  taggedAt: timestamp("tagged_at"),
+  notes: text("notes"),
+});
+
 /** Sync bookkeeping (last run + counts) per source. */
 export const syncState = pgTable("sync_state", {
   key: text("key").primaryKey(), // 'roster' | 'songs'

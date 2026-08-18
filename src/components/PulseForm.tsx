@@ -12,24 +12,28 @@ import { motion, AnimatePresence } from "motion/react";
 const Q1 = ["More energy", "About the same", "Less energy"];
 const Q2 = ["More like worship", "More like work"];
 
-export function PulseForm({ service, teammates }: { service: string; teammates: string[] }) {
+type Teammate = { pcoId: string; name: string };
+
+export function PulseForm({ service, teammates }: { service: string; teammates: Teammate[] }) {
   const [q1, setQ1] = useState<string | null>(null);
   const [q2, setQ2] = useState<string | null>(null);
   const [word, setWord] = useState("");
-  const [thanks, setThanks] = useState<string[]>([]);
+  const [thanks, setThanks] = useState<string[]>([]); // pcoIds
   const [filter, setFilter] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
 
   const ready = q1 && q2;
   const answered = [q1, q2, word.trim(), thanks.length ? "y" : ""].filter(Boolean).length;
+  const nameOf = useMemo(() => new Map(teammates.map((t) => [t.pcoId, t.name])), [teammates]);
+  const thankedNames = thanks.map((id) => nameOf.get(id) ?? "").filter(Boolean);
 
   const filtered = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    return teammates.filter((t) => !f || t.toLowerCase().includes(f)).slice(0, 24);
+    return teammates.filter((t) => !f || t.name.toLowerCase().includes(f)).slice(0, 24);
   }, [teammates, filter]);
 
-  function toggleThanks(name: string) {
-    setThanks((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
+  function toggleThanks(pcoId: string) {
+    setThanks((prev) => (prev.includes(pcoId) ? prev.filter((n) => n !== pcoId) : [...prev, pcoId]));
   }
 
   async function submit() {
@@ -38,7 +42,7 @@ export function PulseForm({ service, teammates }: { service: string; teammates: 
       await fetch("/api/pulse", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ service, energy: q1, worshipOrWork: q2, word, thanks: thanks.join(", ") }),
+        body: JSON.stringify({ service, energy: q1, worshipOrWork: q2, word, thanks: thankedNames.join(", "), thankedIds: thanks }),
       });
     } catch {
       /* optimistic thanks */
@@ -52,7 +56,7 @@ export function PulseForm({ service, teammates }: { service: string; teammates: 
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full grad-mint text-2xl">✓</div>
         <p className="font-display text-2xl font-bold text-text">Thank you.</p>
         <p className="mt-2 text-mute">That&apos;s logged. Rest well — you gave something today.</p>
-        {thanks.length > 0 && <p className="mt-2 text-sm text-mint">{thanks.join(" and ")} will know they helped.</p>}
+        {thankedNames.length > 0 && <p className="mt-2 text-sm text-mint">{thankedNames.join(" and ")} will know they helped.</p>}
         <Link href="/next" className="mt-6 inline-block rounded-full border border-border px-5 py-2.5 text-sm font-medium text-text hover:border-border-strong">
           Done
         </Link>
@@ -106,12 +110,12 @@ export function PulseForm({ service, teammates }: { service: string; teammates: 
           />
         )}
         <div className="mt-3 flex flex-wrap gap-2">
-          {filtered.map((name) => {
-            const on = thanks.includes(name);
+          {filtered.map((t) => {
+            const on = thanks.includes(t.pcoId);
             return (
               <button
-                key={name}
-                onClick={() => toggleThanks(name)}
+                key={t.pcoId}
+                onClick={() => toggleThanks(t.pcoId)}
                 className="rounded-full border px-3 py-1.5 text-sm transition-all"
                 style={{
                   borderColor: on ? "var(--color-mint)" : "var(--color-border)",
@@ -120,7 +124,7 @@ export function PulseForm({ service, teammates }: { service: string; teammates: 
                   fontWeight: on ? 600 : 400,
                 }}
               >
-                {on ? "✓ " : ""}{name}
+                {on ? "✓ " : ""}{t.name}
               </button>
             );
           })}

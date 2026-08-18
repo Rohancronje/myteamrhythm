@@ -110,6 +110,16 @@ export default async function PersonPage({ params }: PageProps<"/journey/[id]">)
         </section>
       )}
 
+      {isSelf && (
+        <Link href="/recap" className="mt-4 flex items-center justify-between rounded-[var(--radius-card)] p-5" style={{ background: "var(--grad-brand)" }}>
+          <span>
+            <span className="block text-sm font-bold text-white">Your Year in Rhythm</span>
+            <span className="block text-xs text-white/80">See your serving story so far</span>
+          </span>
+          <span className="text-white">→</span>
+        </Link>
+      )}
+
       <p className="mt-6 text-center text-xs text-faint">
         {isSelf
           ? "This is your own view. Only pastoral care can see it too."

@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getSession } from "@/lib/auth/server";
+import { nzToday } from "@/lib/time";
 
-// Receives a pulse check-in. In the pilot this validates and (in production)
-// writes to pulse_responses keyed by the pseudonymous handle carried on the link
-// token — never by name. Here we validate and acknowledge; the DB write is wired
-// once DATABASE_URL is set.
+// Receives a pulse check-in. Stores the (pseudonymous) mood, and records any Q4
+// peer thank-yous so they can be surfaced back to the person thanked. If the
+// pulse was filled while signed in, we know the sender; otherwise it's anonymous.
 
 const PulseInput = z.object({
   service: z.string().max(60).optional(),
-  // Q1: More energy / About the same / Less energy
   energy: z.string().max(40),
-  // Q2: More like worship / More like work
   worshipOrWork: z.string().max(40),
-  // Q3: one word (word cloud) · Q4: teammate to thank (companionship)
   word: z.string().max(40).optional(),
   thanks: z.string().max(400).optional(),
-  // In production the link carries a signed token → participant handle.
+  thankedIds: z.array(z.string().max(40)).max(50).optional(),
   token: z.string().optional(),
 });
 
@@ -25,23 +23,38 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: "invalid" }, { status: 400 });
   }
+  const p = parsed.data;
 
   if (process.env.DATABASE_URL) {
     try {
       const { getDb } = await import("@/db");
-      const { pulseResponses } = await import("@/db/schema");
-      const p = parsed.data;
-      await getDb().insert(pulseResponses).values({
+      const { pulseResponses, thankYous } = await import("@/db/schema");
+      const db = getDb();
+      const today = nzToday();
+      await db.insert(pulseResponses).values({
         service: p.service ?? null,
-        serviceDate: new Date().toISOString().slice(0, 10),
+        serviceDate: today,
         energy: p.energy,
         worshipOrWork: p.worshipOrWork,
         word: p.word ?? null,
         thanks: p.thanks ?? null,
       });
+
+      const ids = [...new Set(p.thankedIds ?? [])];
+      if (ids.length) {
+        const sender = await getSession().catch(() => null);
+        await db.insert(thankYous).values(
+          ids.map((recipientPcoId) => ({
+            recipientPcoId,
+            senderPcoId: sender?.personId ?? null,
+            senderName: sender?.name ?? null,
+            service: p.service ?? null,
+            serviceDate: today,
+          })),
+        );
+      }
     } catch {
-      // Optimistic ack: a failed write must never make someone feel their honesty
-      // was rejected. Surface nothing identifying on error.
+      // Optimistic ack — a failed write must never make someone feel rejected.
     }
   }
 

@@ -10,14 +10,14 @@ export function BottomNav({ items }: { items: NavItem[] }) {
   const path = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-[#0a0912]/85 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-xl items-stretch justify-around px-2 py-2">
+      <div className="mx-auto flex max-w-xl items-stretch justify-around px-0.5 py-2">
         {items.map((it) => {
           const active = it.href === "/" ? path === "/" : path === it.href || path.startsWith(it.href + "/");
           return (
             <Link
               key={it.href + it.label}
               href={it.href}
-              className="flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] transition-colors"
+              className="flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] transition-colors"
               style={{ color: active ? "var(--color-text)" : "var(--color-faint)" }}
             >
               <Icon name={it.icon} active={active} />
@@ -32,10 +32,16 @@ export function BottomNav({ items }: { items: NavItem[] }) {
 
 function Icon({ name, active }: { name: NavItem["icon"]; active: boolean }) {
   const stroke = active
-    ? { home: "url(#g1)", teams: "#ff5c8a", songs: "#8b6cff", check: "#38dd9b", insights: "#5cc2ff", me: "url(#g1)", next: "#ffb454" }[name]
+    ? { home: "url(#g1)", teams: "#ff5c8a", songs: "#8b6cff", check: "#38dd9b", insights: "#5cc2ff", me: "url(#g1)", next: "#ffb454", today: "#38dd9b" }[name]
     : "currentColor";
   const common = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none" as const };
   switch (name) {
+    case "today":
+      return (
+        <svg {...common} stroke={stroke} strokeWidth="1.8">
+          <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5z" strokeLinejoin="round" />
+        </svg>
+      );
     case "next":
       return (
         <svg {...common} stroke={stroke} strokeWidth="1.8">
