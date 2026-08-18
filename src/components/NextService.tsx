@@ -7,8 +7,10 @@ import { daysFromToday } from "@/lib/time";
 const TZ = "Pacific/Auckland"; // NS Family Services is in NZ
 
 function fmtDate(dateISO: string): string {
-  const d = new Date(dateISO + "T12:00:00Z");
-  return new Intl.DateTimeFormat("en-NZ", { weekday: "long", month: "short", day: "numeric", timeZone: TZ }).format(d);
+  // A date-only value is already the NZ service date — format it in UTC so we
+  // don't shift it across midnight (NZ is UTC+12/13).
+  const d = new Date(dateISO + "T00:00:00Z");
+  return new Intl.DateTimeFormat("en-NZ", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" }).format(d);
 }
 function fmtTime(startsAt: string): string {
   const d = new Date(startsAt);

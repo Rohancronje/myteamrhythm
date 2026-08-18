@@ -75,7 +75,7 @@ export default async function TodayPage() {
             {upcoming.slice(1).map((d) => (
               <li key={d.day} className="flex items-center justify-between text-sm">
                 <span className="text-text">{d.reference}</span>
-                <span className="text-xs text-faint">{new Intl.DateTimeFormat("en-NZ", { weekday: "short", day: "numeric", month: "short", timeZone: "Pacific/Auckland" }).format(new Date(d.day + "T12:00:00Z"))}</span>
+                <span className="text-xs text-faint">{new Intl.DateTimeFormat("en-NZ", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(d.day + "T00:00:00Z"))}</span>
               </li>
             ))}
           </ul>
