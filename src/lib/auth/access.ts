@@ -1,9 +1,8 @@
-// Central access rules by role (handover section 3):
-//  - admin   → everything
-//  - leader  → own profile + Song Intelligence (setlists)
-//  - member  → own profile only
-// Section-level gating is enforced in the proxy; per-record ownership (you may
-// only open YOUR OWN profile) is enforced in the /journey page.
+// Central access rules by role. The app is now a volunteer connection platform:
+//  - admin → everything (manage teams, members, coaches; connect; accounts)
+//  - coach → their Connect workspace only
+//  - leader / member → no app access (volunteers are records, not logins)
+// Section-level gating is enforced in the proxy.
 
 import type { Role } from "./session";
 
@@ -11,49 +10,45 @@ import type { Role } from "./session";
 export function canAccess(role: Role, pathname: string): boolean {
   if (role === "admin") return true;
 
-  // Admin-only surfaces (team-wide pastoral data).
-  if (pathname === "/teams" || pathname.startsWith("/teams/")) return false;
-  if (pathname === "/insights") return false;
-  if (pathname.startsWith("/api/sync")) return false;
+  // Coaches: the connect tool (their own teams) + birthdays + logging contacts.
+  if (role === "coach") {
+    if (pathname === "/connect" || pathname.startsWith("/connect/")) return true;
+    if (pathname === "/birthdays") return true;
+    if (pathname.startsWith("/api/connect") || pathname.startsWith("/api/contacts")) return true;
+    return false;
+  }
 
-  // Setlists: leaders too, but not members.
-  if (pathname === "/songs" || pathname.startsWith("/songs/")) return role === "leader";
+  // leader / member have no surfaces in the connection platform.
+  return false;
+}
 
-  // Home, own profile, pulse — allowed for everyone signed in.
-  return true;
+/** The landing page a role can actually access (avoids redirect loops). */
+export function homePathFor(role: Role): string {
+  if (role === "admin") return "/teams";
+  if (role === "coach") return "/connect";
+  return "/login";
 }
 
 export interface NavItem {
   href: string;
   label: string;
-  icon: "home" | "teams" | "songs" | "check" | "insights" | "me" | "next" | "today";
+  icon: "home" | "teams" | "songs" | "check" | "insights" | "me" | "next" | "today" | "connect" | "birthday";
 }
 
-/** The bottom-nav items appropriate for a role (and their own profile link). */
-export function navFor(role: Role, personId?: string): NavItem[] {
-  const me = personId ? `/journey/${personId}` : "/next";
+/** The nav items appropriate for a role. */
+export function navFor(role: Role): NavItem[] {
   if (role === "admin") {
     return [
-      { href: "/", label: "Home", icon: "home" },
-      { href: "/next", label: "Next", icon: "next" },
       { href: "/teams", label: "Teams", icon: "teams" },
-      { href: "/songs", label: "Songs", icon: "songs" },
-      { href: "/today", label: "Today", icon: "today" },
+      { href: "/connect", label: "Connect", icon: "connect" },
+      { href: "/birthdays", label: "Birthdays", icon: "birthday" },
     ];
   }
-  if (role === "leader") {
+  if (role === "coach") {
     return [
-      { href: "/next", label: "Next", icon: "next" },
-      { href: me, label: "Me", icon: "me" },
-      { href: "/songs", label: "Songs", icon: "songs" },
-      { href: "/today", label: "Today", icon: "today" },
-      { href: "/pulse", label: "Check-in", icon: "check" },
+      { href: "/connect", label: "Connect", icon: "connect" },
+      { href: "/birthdays", label: "Birthdays", icon: "birthday" },
     ];
   }
-  return [
-    { href: "/next", label: "Next", icon: "next" },
-    { href: me, label: "Me", icon: "me" },
-    { href: "/today", label: "Today", icon: "today" },
-    { href: "/pulse", label: "Check-in", icon: "check" },
-  ];
+  return [];
 }

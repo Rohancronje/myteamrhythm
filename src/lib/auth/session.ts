@@ -5,7 +5,7 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export type Role = "admin" | "leader" | "member";
+export type Role = "admin" | "coach" | "leader" | "member";
 
 export interface SessionUser {
   email: string;
@@ -13,6 +13,8 @@ export interface SessionUser {
   role: Role;
   /** The person's Planning Center id — links a login to their own profile. */
   personId?: string;
+  /** For coaches: the Planning Center teams they connect with. */
+  teams?: string[];
 }
 
 export const SESSION_COOKIE = "rhythm_session";
@@ -51,7 +53,7 @@ export function verifySession(token: string | undefined): SessionUser | null {
   try {
     const data = JSON.parse(fromB64url(payload)) as SessionUser & { exp: number };
     if (!data.exp || data.exp < Math.floor(Date.now() / 1000)) return null;
-    return { email: data.email, name: data.name, role: data.role, personId: data.personId };
+    return { email: data.email, name: data.name, role: data.role, personId: data.personId, teams: data.teams };
   } catch {
     return null;
   }

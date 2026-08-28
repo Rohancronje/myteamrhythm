@@ -13,16 +13,18 @@ export const dynamic = "force-dynamic";
 // worship-leader → song/key correlation, live from the Services API setlists.
 
 export default async function SongsPage() {
-  const intel = await getSongIntel();
-  const session = await getSession();
-  const scripture = await getSongScriptureMap();
+  const [intel, session, scripture] = await Promise.all([
+    getSongIntel(),
+    getSession(),
+    getSongScriptureMap(),
+  ]);
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
+    <main className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6 lg:max-w-none lg:px-10 lg:pb-12 2xl:max-w-7xl">
       <header className="rise mb-7 flex items-center justify-between">
         <div>
           <Wordmark />
-          <p className="mt-1.5 text-sm text-mute">Song Intelligence</p>
+          <h1 className="mt-1.5 text-sm font-normal text-mute">Insights · worship</h1>
         </div>
         <AccountChip />
       </header>
@@ -61,9 +63,9 @@ export default async function SongsPage() {
           {/* Worship leaders */}
           <section className="rise" style={{ animationDelay: "110ms" }}>
             <h2 className="mb-3.5 text-sm font-medium text-mute">Worship leaders</h2>
-            <div className="no-scrollbar -mx-5 flex gap-3.5 overflow-x-auto px-5 pb-1">
+            <div className="no-scrollbar -mx-5 flex gap-3.5 overflow-x-auto px-5 pb-1 lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 2xl:grid-cols-4">
               {intel.leaders.slice(0, 8).map((l) => (
-                <div key={l.name} className="glass w-60 shrink-0 rounded-2xl p-5">
+                <div key={l.name} className="glass w-60 shrink-0 rounded-2xl p-5 lg:w-auto">
                   <p className="font-display text-base font-bold text-text">{l.name}</p>
                   <p className="mt-0.5 text-xs text-mute">Led {l.timesLed} · home {l.homeTurf}</p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
@@ -81,6 +83,7 @@ export default async function SongsPage() {
             </div>
           </section>
 
+          <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:space-y-0 space-y-8">
           {/* In rotation */}
           <section className="rise" style={{ animationDelay: "150ms" }}>
             <h2 className="mb-3.5 text-sm font-medium text-mute">In rotation</h2>
@@ -132,6 +135,7 @@ export default async function SongsPage() {
               </div>
             </section>
           )}
+          </div>
 
           {/* Key library */}
           <section className="rise" style={{ animationDelay: "220ms" }}>
@@ -161,7 +165,7 @@ export default async function SongsPage() {
       )}
 
       <AppNav />
-    </div>
+    </main>
   );
 }
 

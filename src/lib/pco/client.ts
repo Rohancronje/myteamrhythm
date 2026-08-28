@@ -10,6 +10,7 @@
 // resources side-loaded under `included` when you pass ?include=.
 
 import type { ScheduleStatus, ServiceTypeKey } from "@/lib/rhythm/types";
+import { nzDateOf } from "@/lib/time";
 
 const BASE = "https://api.planningcenteronline.com/services/v2";
 
@@ -256,7 +257,8 @@ export class PcoClient {
       const plans = await this.listPastPlans(pcoId, sinceISO);
       onProgress?.(`${key}: ${plans.length} plans since ${sinceISO}`);
       for (const plan of plans) {
-        const members = await this.planTeamMembers(pcoId, plan.id);
+        const [members, times] = await Promise.all([this.planTeamMembers(pcoId, plan.id), this.planTimes(pcoId, plan.id)]);
+        const date = serviceDateFromTimes(times, plan.date); // real service day (NZ), not sort_date
         for (const m of members) {
           if (!m.personId) continue;
           results.push({
@@ -264,7 +266,7 @@ export class PcoClient {
             personName: m.personName,
             team: m.team,
             serviceType: key,
-            date: plan.date,
+            date,
             planId: plan.id,
             status: m.status,
             position: m.position,
@@ -274,6 +276,15 @@ export class PcoClient {
     }
     return results;
   }
+}
+
+/** The NZ calendar date a plan actually happens, from its plan_times: prefer the
+ *  "service" time, else the earliest time. PCO's `sort_date` is unreliable across
+ *  the UTC→NZ boundary — a Sunday-morning service is Saturday in UTC — so we never
+ *  use it for the stored date. Falls back to `fallback` when there are no times. */
+export function serviceDateFromTimes(times: { startsAt: string; timeType: string }[], fallback = ""): string {
+  const svc = times.find((t) => t.timeType === "service") ?? times[0];
+  return nzDateOf(svc?.startsAt) || fallback;
 }
 
 function labelForTimeType(t: string): string {

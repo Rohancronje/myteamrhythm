@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Role } from "@/lib/auth/session";
 
-const ROLE_LABEL: Record<Role, string> = { admin: "Admin", leader: "Worship leader", member: "Member" };
+const ROLE_LABEL: Record<Role, string> = { admin: "Admin", coach: "Coach", leader: "Worship leader", member: "Member" };
 
 export function AccountMenu({ name, role, personId }: { name: string; role: Role; personId?: string }) {
   const router = useRouter();

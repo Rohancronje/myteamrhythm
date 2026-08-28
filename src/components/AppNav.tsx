@@ -3,9 +3,17 @@
 import { BottomNav } from "./BottomNav";
 import { getSession } from "@/lib/auth/server";
 import { navFor } from "@/lib/auth/access";
+import { getAttention } from "@/lib/data/attention";
 
 export async function AppNav() {
   const session = await getSession();
   if (!session) return null; // public pages (e.g. pulse without login) get no app nav
-  return <BottomNav items={navFor(session.role, session.personId)} />;
+  const attention = await getAttention(session);
+  return (
+    <BottomNav
+      items={navFor(session.role)}
+      user={{ name: session.name, role: session.role }}
+      attention={attention}
+    />
+  );
 }

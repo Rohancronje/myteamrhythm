@@ -4,6 +4,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { unstable_cache } from "next/cache";
 
 export interface UpcomingTime {
   name: string;
@@ -34,8 +35,6 @@ export interface UpcomingService {
   songs: UpcomingSong[];
 }
 
-let cache: Promise<UpcomingService[]> | null = null;
-
 async function loadAll(): Promise<UpcomingService[]> {
   if (process.env.DATABASE_URL) {
     const { readUpcoming } = await import("@/db/read");
@@ -51,10 +50,10 @@ async function loadAll(): Promise<UpcomingService[]> {
   }
 }
 
-function load() {
-  if (!cache) cache = loadAll();
-  return cache;
-}
+// The raw upcoming set changes only on sync; cache it and refresh via
+// revalidateTag("upcoming"). The per-request "today" filtering stays outside the
+// cache (below) so the cutoff is always current.
+const load = unstable_cache(loadAll, ["rhythm:upcoming"], { revalidate: 300, tags: ["upcoming"] });
 
 const SERVICE_LABEL: Record<string, string> = {
   sunday_am: "Sunday AM",

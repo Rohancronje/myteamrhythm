@@ -53,7 +53,7 @@ export function ScriptureRefs({ refs, draft }: { refs: string[]; draft?: boolean
             </button>
           );
         })}
-        {draft && <span className="text-[10px] text-faint">draft</span>}
+        {draft && <span className="text-[10px] text-faint" title="Auto-tagged, not yet reviewed by a person">unverified</span>}
       </div>
 
       {open && (

@@ -47,8 +47,10 @@ export async function writeUpcoming(rows: UpcomingRow[], meta?: unknown) {
 export interface UserRow {
   email: string;
   name: string;
+  phone?: string | null;
   role: string;
   personId: string | null;
+  teams?: string[] | null;
   passwordHash: string;
 }
 
@@ -58,10 +60,10 @@ export async function writeUsers(rows: UserRow[]) {
   for (const u of rows) {
     await db
       .insert(users)
-      .values(u)
+      .values({ ...u, phone: u.phone ?? null, teams: u.teams ?? [] })
       .onConflictDoUpdate({
         target: users.email,
-        set: { name: u.name, role: u.role, personId: u.personId, passwordHash: u.passwordHash },
+        set: { name: u.name, phone: u.phone ?? null, role: u.role, personId: u.personId, teams: u.teams ?? [], passwordHash: u.passwordHash },
       });
   }
 }

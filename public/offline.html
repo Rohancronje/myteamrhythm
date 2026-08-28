@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offline · Rhythm</title>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    body {
+      background: #0a0912; color: #f4f2ff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px;
+    }
+    .card { max-width: 340px; }
+    .logo { width: 200px; max-width: 70%; height: auto; border-radius: 16px; margin-bottom: 24px; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    p { font-size: 14px; line-height: 1.6; color: #b4b0c2; margin: 0 0 20px; }
+    button {
+      border: 0; border-radius: 999px; padding: 12px 28px; font-size: 14px; font-weight: 700; color: #fff;
+      background: linear-gradient(135deg, #8b6cff, #ff5c8a); cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img class="logo" src="/logo.jpg" alt="Rhythm" />
+    <h1>You're offline</h1>
+    <p>Rhythm needs a connection to load your teams and connections. Check your internet and try again.</p>
+    <button onclick="location.reload()">Try again</button>
+  </div>
+</body>
+</html>

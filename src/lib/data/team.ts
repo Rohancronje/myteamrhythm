@@ -5,6 +5,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { unstable_cache } from "next/cache";
 import { assess, type Assessment, type PersonEvent } from "@/lib/rhythm/assess";
 
 interface SnapshotPerson {
@@ -38,8 +39,6 @@ export interface TeamInfo {
   generatedAt: string | null;
 }
 
-let cache: Promise<{ members: TeamMember[]; all: TeamMember[]; info: TeamInfo }> | null = null;
-
 async function loadSnapshot(): Promise<Snapshot | null> {
   if (process.env.DATABASE_URL) {
     const { readRosterSnapshot } = await import("@/db/read");
@@ -54,7 +53,15 @@ async function loadSnapshot(): Promise<Snapshot | null> {
 }
 
 function initials(name: string): string {
-  return name.split(/\s+/).map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  // Drop quoted nicknames ("Nick") and bracketed segments ((Hyun Keun)) so we
+  // don't derive initials from punctuation, then keep only letters.
+  const cleaned = name
+    .replace(/["'“”‘’][^"'“”‘’]*["'“”‘’]/g, " ")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[^\p{L}\s]/gu, " ");
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  const letters = parts.map((n) => n[0]).slice(0, 2).join("");
+  return (letters || name.replace(/[^\p{L}]/gu, "").charAt(0) || "?").toUpperCase();
 }
 
 async function build() {
@@ -78,16 +85,27 @@ async function build() {
   return { members, all, info: { source: "planning-center", org: snap.org, generatedAt: snap.generatedAt } as TeamInfo };
 }
 
-function load() {
-  if (!cache) cache = build();
-  return cache;
-}
+// Cross-request cache: the roster + assessments only change when a sync writes new
+// data, so we cache the whole computed result for a short window (refreshed on the
+// nightly cron and on webhooks via revalidateTag("team")). This turns most page
+// loads into a fast cache read instead of "fetch all people+events, reassess each".
+const load = unstable_cache(build, ["rhythm:team"], { revalidate: 300, tags: ["team"] });
 
 export async function getTeam(): Promise<TeamMember[]> {
   return (await load()).members;
 }
 export async function getTeamInfo(): Promise<TeamInfo> {
   return (await load()).info;
+}
+/** Every person in the roster window (not just recently active). */
+export async function getAllMembers(): Promise<TeamMember[]> {
+  return (await load()).all;
+}
+/** Distinct team names in the roster (for assigning coaches). */
+export async function getTeamNames(): Promise<string[]> {
+  const seen = new Set<string>();
+  for (const m of (await load()).all) seen.add(m.team);
+  return [...seen].sort((a, b) => a.localeCompare(b));
 }
 export async function getMember(id: string): Promise<TeamMember | undefined> {
   return (await load()).all.find((m) => m.id === id);
@@ -144,6 +162,52 @@ export function getTeamGroups(members: TeamMember[]): TeamGroup[] {
     })
     .filter((g) => g.members.length >= 2)
     .sort((a, b) => SEV[b.status] - SEV[a.status] || b.flagged - a.flagged);
+}
+
+// ── Campus separation ────────────────────────────────────────────────────────
+// One Planning Center org holds several campuses; the campus lives only in the
+// team-name prefix (e.g. "NS Worship" vs "Dunedin"). We bucket by campus so a
+// campus's teams and totals are never blended with another's.
+
+const CAMPUS_ORDER = ["North Shore", "Dunedin", "Other"];
+
+/** The campus a team belongs to, derived from its name. */
+export function campusOf(team: string): string {
+  const t = team.trim();
+  if (/^ns\b/i.test(t)) return "North Shore";
+  if (/dunedin/i.test(t)) return "Dunedin";
+  return "Other";
+}
+
+export interface CampusSection {
+  campus: string;
+  groups: TeamGroup[];
+  serving: number;
+  flagged: number;
+  status: "steady" | "watch" | "elevated";
+}
+
+/** Team groups bucketed by campus — campuses ordered NS → Dunedin → Other,
+ *  teams within each campus already ordered by concern. Never blended. */
+export function getCampusSections(members: TeamMember[]): CampusSection[] {
+  const map = new Map<string, TeamGroup[]>();
+  for (const g of getTeamGroups(members)) {
+    const c = campusOf(g.team);
+    const arr = map.get(c) ?? [];
+    arr.push(g);
+    map.set(c, arr);
+  }
+  return [...map.entries()]
+    .map(([campus, groups]) => {
+      const serving = groups.reduce((n, g) => n + g.members.length, 0);
+      const flagged = groups.reduce((n, g) => n + g.flagged, 0);
+      const status = groups.some((g) => g.status === "elevated") ? "elevated" : flagged > 0 ? "watch" : "steady";
+      return { campus, groups, serving, flagged, status: status as CampusSection["status"] };
+    })
+    .sort((a, b) => {
+      const ai = CAMPUS_ORDER.indexOf(a.campus), bi = CAMPUS_ORDER.indexOf(b.campus);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
 }
 
 /** One team by name (exact match), or undefined. Includes small teams too. */

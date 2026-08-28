@@ -16,6 +16,11 @@
 
 export type Status = "steady" | "watch" | "elevated";
 
+// What is driving a flag: too much at once (volume) vs no rest for a long time
+// (endurance). They need different pastoral responses, so we surface them apart —
+// a 25-week unbroken streak at 2/week is "No break", not "Heavy load".
+export type FlagDriver = "volume" | "endurance" | null;
+
 export interface PersonEvent {
   serviceType: string;
   date: string; // YYYY-MM-DD, past services only
@@ -26,6 +31,8 @@ export interface PersonEvent {
 
 export interface Assessment {
   status: Status;
+  /** What's driving the flag — volume (too much) vs endurance (no break). */
+  driver: FlagDriver;
   /** One plain-language sentence explaining a flag (empty string if Steady). */
   reason: string;
   /** Consecutive weeks served without a break (rule 4). */
@@ -38,6 +45,8 @@ export interface Assessment {
   totalServices: number;
   /** Per-week served/not (oldest→newest) for the dot-calendar graph. */
   weeklyDots: boolean[];
+  /** Per-week service count (oldest→newest) — lets the dots colour by load. */
+  weeklyCounts: number[];
   lastServed: string | null;
   recentlyActive: boolean;
 }
@@ -100,16 +109,18 @@ export function assess(events: PersonEvent[], now: Date, windowWeeks = 26): Asse
   const heavyWeeksRecent = weeks.slice(-6).filter((w) => w.count >= 3).length;
   const recentlyActive = weeks.slice(-2).some((w) => w.count > 0);
 
-  const { status, reason } = classify({ streakWeeks, servicesThisWeek, heavyWeeksRecent, recentlyActive });
+  const { status, reason, driver } = classify({ streakWeeks, servicesThisWeek, heavyWeeksRecent, recentlyActive });
 
   return {
     status,
+    driver,
     reason,
     streakWeeks,
     servicesThisWeek,
     heavyWeeksRecent,
     totalServices,
     weeklyDots,
+    weeklyCounts: weeks.map((w) => w.count),
     lastServed,
     recentlyActive,
   };
@@ -120,25 +131,26 @@ function classify(x: {
   servicesThisWeek: number;
   heavyWeeksRecent: number;
   recentlyActive: boolean;
-}): { status: Status; reason: string } {
-  const reasons: { sev: number; text: string }[] = [];
+}): { status: Status; reason: string; driver: FlagDriver } {
+  const reasons: { sev: number; driver: Exclude<FlagDriver, null>; text: string }[] = [];
 
-  // Rule 3 — repeated 3+ weeks weigh more than a one-off.
+  // Rule 3 — repeated 3+ weeks weigh more than a one-off. (volume)
   if (x.heavyWeeksRecent >= 2)
-    reasons.push({ sev: 3, text: `Three or more services a week, ${x.heavyWeeksRecent} of the last 6 weeks` });
+    reasons.push({ sev: 3, driver: "volume", text: `Served 3+ times a week in ${x.heavyWeeksRecent} of the last 6 weeks — a heavy stretch` });
   else if (x.servicesThisWeek >= 3)
-    reasons.push({ sev: 2, text: `${x.servicesThisWeek} services this week — above the healthy pace` });
+    reasons.push({ sev: 2, driver: "volume", text: `On ${x.servicesThisWeek} services this week — more than the healthy two` });
   else if (x.heavyWeeksRecent === 1)
-    reasons.push({ sev: 1, text: "A heavier-than-usual week recently" });
+    reasons.push({ sev: 1, driver: "volume", text: "Had one heavy week recently (3+ services)" });
 
-  // Rule 4 — long streak without a break, independent of weekly count.
-  if (x.streakWeeks >= 16) reasons.push({ sev: 3, text: `${x.streakWeeks} weeks serving without a break` });
-  else if (x.streakWeeks >= 8) reasons.push({ sev: 2, text: `${x.streakWeeks} weeks serving without a break` });
-  else if (x.streakWeeks >= 6) reasons.push({ sev: 1, text: `${x.streakWeeks} weeks serving without a break` });
+  // Rule 4 — long streak without a break, independent of weekly count. (endurance)
+  if (x.streakWeeks >= 16) reasons.push({ sev: 3, driver: "endurance", text: `Serving ${x.streakWeeks} weeks straight with no break` });
+  else if (x.streakWeeks >= 8) reasons.push({ sev: 2, driver: "endurance", text: `Serving ${x.streakWeeks} weeks straight with no break` });
+  else if (x.streakWeeks >= 6) reasons.push({ sev: 1, driver: "endurance", text: `Serving ${x.streakWeeks} weeks straight with no break` });
 
   const maxSev = reasons.reduce((m, r) => Math.max(m, r.sev), 0);
   // Elevated is the top severity; Watch spans the milder flags; Steady has none.
   const status: Status = maxSev >= 3 ? "elevated" : maxSev >= 1 ? "watch" : "steady";
-  const top = reasons.sort((a, b) => b.sev - a.sev)[0];
-  return { status, reason: top?.text ?? "" };
+  // Highest severity wins; on a tie, volume (acute) is surfaced over endurance.
+  const top = reasons.sort((a, b) => b.sev - a.sev || (a.driver === "volume" ? -1 : 1))[0];
+  return { status, reason: top?.text ?? "", driver: top?.driver ?? null };
 }

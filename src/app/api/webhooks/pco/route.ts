@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { pcoConfigFromEnv } from "@/lib/pco/client";
 import { syncOnePlan, removePlan } from "@/lib/pco/sync";
@@ -64,6 +65,14 @@ export async function POST(req: Request) {
     } catch (e) {
       results.push(`${planId} error: ${(e as Error).message}`);
     }
+  }
+
+  // A plan change can touch the roster, setlist and serving history — refresh the
+  // affected caches so the change is visible in seconds, not after the TTL.
+  if (results.length > 0) {
+    revalidateTag("upcoming", "max");
+    revalidateTag("team", "max");
+    revalidateTag("songs", "max");
   }
 
   return NextResponse.json({ ok: true, handled: results });

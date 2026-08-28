@@ -1,5 +1,8 @@
 {
+  "regions": ["syd1"],
   "crons": [
-    { "path": "/api/cron/sync", "schedule": "0 15 * * *" }
+    { "path": "/api/ping", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/birthdays", "schedule": "0 19 * * *" },
+    { "path": "/api/cron/sync", "schedule": "0 19 * * 0" }
   ]
 }

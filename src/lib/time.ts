@@ -10,6 +10,17 @@ export function nzToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: NZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
+/** The NZ calendar date (YYYY-MM-DD) for an ISO timestamp. A Sunday-morning NZ
+ *  service is still Saturday in UTC, so slicing the raw UTC timestamp lands a day
+ *  early — always resolve service dates through here. Date-only strings pass through. */
+export function nzDateOf(iso: string | null | undefined): string {
+  if (!iso) return "";
+  if (!iso.includes("T")) return iso.slice(0, 10);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: NZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
 /** Current hour (0–23) in NZ. */
 export function nzHour(): number {
   return Number(new Intl.DateTimeFormat("en-GB", { timeZone: NZ, hour: "2-digit", hourCycle: "h23" }).format(new Date()));

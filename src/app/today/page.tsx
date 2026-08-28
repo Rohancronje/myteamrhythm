@@ -18,7 +18,7 @@ export default async function TodayPage() {
   const upcoming = await getReadingUpcoming(6);
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">
+    <main className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6 lg:max-w-none lg:px-10 lg:pb-12">
       <header className="rise mb-6 flex items-center justify-between">
         <div>
           <Wordmark />
@@ -27,12 +27,14 @@ export default async function TodayPage() {
         <AccountChip />
       </header>
 
+      <div className="lg:mx-auto lg:max-w-3xl">
+
       {/* Reading streak (encouraged, gamified) */}
       {session?.personId && (
         <section className="rise mb-4 flex items-center gap-4 rounded-[var(--radius-card)] p-5" style={{ background: "linear-gradient(135deg, rgba(255,180,84,0.16), rgba(255,92,138,0.12))", border: "1px solid rgba(255,180,84,0.3)" }}>
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-solid text-2xl">🔥</div>
           <div>
-            <p className="font-display text-2xl font-bold text-text">{streak.streak}-day streak</p>
+            <p className="font-display text-2xl font-bold text-text">{streak.streak === 0 ? "Start your streak today" : `${streak.streak}-day streak`}</p>
             <p className="text-xs text-mute">
               {streak.streak === 0 && !streak.readToday
                 ? "Read today to start your streak."
@@ -51,7 +53,7 @@ export default async function TodayPage() {
           </div>
           <h1 className="mt-2 font-display text-2xl font-bold text-text">{today.reference}</h1>
           {passage ? (
-            <p className="mt-4 max-h-[46vh] overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed text-mute">{passage.text}</p>
+            <p className="mt-4 max-h-[46vh] overflow-y-auto whitespace-pre-wrap text-[15px] leading-relaxed text-mute lg:max-h-none lg:overflow-visible">{passage.text}</p>
           ) : (
             <p className="mt-4 text-sm text-faint">Couldn&apos;t load the passage right now — try again shortly.</p>
           )}
@@ -81,8 +83,9 @@ export default async function TodayPage() {
           </ul>
         </section>
       )}
+      </div>
 
       <AppNav />
-    </div>
+    </main>
   );
 }

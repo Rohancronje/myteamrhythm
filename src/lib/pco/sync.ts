@@ -2,7 +2,7 @@
 // Fetches from Planning Center and upserts into Postgres. Keeping it here (not
 // just in scripts) lets the serverless cron + webhook reuse the exact same logic.
 
-import { PcoClient, pcoConfigFromEnv, type PcoConfig } from "./client";
+import { PcoClient, pcoConfigFromEnv, serviceDateFromTimes, type PcoConfig } from "./client";
 import { pseudonymFor } from "./pseudonym";
 import {
   writeRoster,
@@ -79,10 +79,10 @@ export async function syncSongs(weeks = 4, cfg: PcoConfig = pcoConfigFromEnv()) 
   for (const [pcoId, key] of Object.entries(cfg.serviceTypeMap)) {
     const plans = await client.listPastPlans(pcoId, since);
     for (const plan of plans) {
-      const [songs, members] = await Promise.all([client.planItems(pcoId, plan.id), client.planTeamMembers(pcoId, plan.id)]);
+      const [songs, members, times] = await Promise.all([client.planItems(pcoId, plan.id), client.planTeamMembers(pcoId, plan.id), client.planTimes(pcoId, plan.id)]);
       if (!songs.length) continue;
       const lead = members.find((m) => /worship\s*lead|music director|^lead$/i.test(m.position));
-      services.push({ planId: plan.id, serviceDate: plan.date, serviceType: key, leader: lead?.personName ?? null });
+      services.push({ planId: plan.id, serviceDate: serviceDateFromTimes(times, plan.date), serviceType: key, leader: lead?.personName ?? null });
       songs.forEach((s, i) => slots.push({ planId: plan.id, songId: s.songId, title: s.title, author: s.author, keyName: s.key, bpm: s.bpm == null ? null : Math.round(s.bpm), position: i }));
     }
   }
@@ -108,7 +108,7 @@ async function buildUpcomingRow(client: PcoClient, serviceTypeId: string, key: s
   const [times, members, songs] = await Promise.all([client.planTimes(serviceTypeId, planId), client.planTeamMembers(serviceTypeId, planId), client.planItems(serviceTypeId, planId)]);
   return {
     planId,
-    serviceDate: date,
+    serviceDate: serviceDateFromTimes(times, date), // real service day (NZ), not sort_date
     serviceType: key,
     title,
     seriesTitle,
@@ -135,8 +135,8 @@ export async function syncOnePlan(serviceTypeId: string, planId: string, cfg: Pc
     client.planTeamMembers(serviceTypeId, planId),
     client.planItems(serviceTypeId, planId),
   ]);
-  // Derive the date from the plan_times (first) — fall back handled by caller.
-  const date = times[0]?.startsAt?.slice(0, 10) ?? "";
+  // Derive the date from the plan's service time (NZ) — not sort_date.
+  const date = serviceDateFromTimes(times);
 
   if (!date || date >= todayISO()) {
     // Future (or unknown) → upcoming.

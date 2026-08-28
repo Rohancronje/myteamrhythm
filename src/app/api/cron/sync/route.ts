@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { syncUpcoming, syncRoster, syncSongs } from "@/lib/pco/sync";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,11 @@ export async function GET(req: Request) {
     const upcoming = await syncUpcoming(6);
     const roster = await syncRoster(3);
     const songs = await syncSongs(3);
+    // New data landed — drop the cached loaders so pages show it immediately
+    // instead of waiting out the revalidate window.
+    revalidateTag("upcoming", "max");
+    revalidateTag("team", "max");
+    revalidateTag("songs", "max");
     return NextResponse.json({ ok: true, upcoming, roster, songs });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 502 });

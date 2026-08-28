@@ -6,5 +6,11 @@ import { getSession } from "@/lib/auth/server";
 export async function AccountChip() {
   const session = await getSession();
   if (!session) return null;
-  return <AccountMenu name={session.name} role={session.role} personId={session.personId} />;
+  // On desktop the sidebar footer owns the account/sign-out; hide the top-right
+  // chip there to avoid two controls for the same job (audit L9).
+  return (
+    <div className="lg:hidden">
+      <AccountMenu name={session.name} role={session.role} personId={session.personId} />
+    </div>
+  );
 }

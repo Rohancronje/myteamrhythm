@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { getSession } from "@/lib/auth/server";
 import { nzToday } from "@/lib/time";
@@ -38,6 +39,10 @@ export async function POST(req: Request) {
       target: songTags.title,
       set: { displayTitle: p.displayTitle, themes: p.themes, scriptureRefs: p.scriptureRefs, status: p.status, taggedBy: session.name, taggedAt: new Date(nzToday() + "T12:00:00Z"), notes: p.notes ?? null },
     });
+
+  // The song→scripture map just changed — refresh it so the new tags show on the
+  // setlist, Song Intelligence and Today devotional right away.
+  revalidateTag("song-tags", "max");
 
   return NextResponse.json({ ok: true });
 }

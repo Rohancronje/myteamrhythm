@@ -9,6 +9,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,6 +75,19 @@ export function LoginForm() {
       >
         {busy ? "Signing in…" : "Sign in"}
       </button>
+
+      <div className="pt-1 text-center">
+        <button type="button" onClick={() => setForgot((f) => !f)} className="text-xs text-mute underline-offset-2 hover:text-text hover:underline">
+          Forgot password?
+        </button>
+      </div>
+      {forgot && (
+        <div className="rounded-xl border border-border bg-surface-solid px-4 py-3 text-xs leading-relaxed text-mute">
+          Rhythm is invite-only, so passwords are reset by an admin. Ask whoever set up your
+          account (your church admin) to reset it for you — they can do it in seconds from the
+          Accounts screen, and hand you a new one.
+        </div>
+      )}
     </form>
   );
 }

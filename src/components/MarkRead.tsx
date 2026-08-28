@@ -29,9 +29,12 @@ export function MarkRead({ readToday }: { readToday: boolean }) {
     );
   }
   return (
-    <button onClick={mark} disabled={busy} className="flex w-full items-center justify-center gap-2.5 rounded-full grad-brand py-3.5 text-sm font-semibold text-white transition-opacity disabled:opacity-40">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white/80" />
-      {busy ? "Saving…" : "I've read it — tick to keep my streak"}
-    </button>
+    <div>
+      <button onClick={mark} disabled={busy} className="flex w-full items-center justify-center gap-2.5 rounded-full grad-brand py-3.5 text-sm font-semibold text-white transition-opacity disabled:opacity-40">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white/80" />
+        {busy ? "Saving…" : "Mark as read"}
+      </button>
+      <p className="mt-2 text-center text-[11px] text-faint">Keeps your reading streak going.</p>
+    </div>
   );
 }

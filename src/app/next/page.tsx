@@ -11,11 +11,15 @@ export const dynamic = "force-dynamic";
 
 export default async function NextPage() {
   const session = await getSession();
-  const mine = await getNextServiceForPerson(session?.personId);
+  // Independent reads — run them together instead of one-after-another.
+  const [mine, thanks, scriptureMap] = await Promise.all([
+    getNextServiceForPerson(session?.personId),
+    getThanksFor(session?.personId),
+    getSongScriptureMap(),
+  ]);
   const service = mine?.service ?? (await getNextServiceOverall());
   const personal = !!mine;
-  const thanks = await getThanksFor(session?.personId);
-  const scriptureByTitle = Object.fromEntries(await getSongScriptureMap());
+  const scriptureByTitle = Object.fromEntries(scriptureMap);
 
   return (
     <div className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6">

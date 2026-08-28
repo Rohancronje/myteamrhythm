@@ -12,7 +12,12 @@ export function getDb() {
   if (_db) return _db;
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
-  const client = postgres(url, { prepare: false });
+  // Serverless pool against Supabase's transaction pooler (no prepared statements).
+  // Vercel runs multiple requests concurrently per instance, and each page render
+  // fans out several queries + prefetches sibling routes — so max:3 starved and
+  // requests hung waiting for a free connection. The transaction pooler multiplexes
+  // many client connections onto few server ones, so a larger client pool is safe.
+  const client = postgres(url, { prepare: false, max: 20, idle_timeout: 20, connect_timeout: 10 });
   _db = drizzle(client, { schema });
   return _db;
 }

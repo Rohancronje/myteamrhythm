@@ -2,30 +2,43 @@
 // "scriptures behind the songs" on the setlist, in Song Intelligence, and for
 // matching a reading to relevant songs. Only returns songs that have been tagged.
 
+import { unstable_cache } from "next/cache";
+
 export interface SongScripture {
   themes: string[];
   refs: string[];
   status: "tagged" | "needs_review";
 }
 
-export async function getSongScriptureMap(): Promise<Map<string, SongScripture>> {
-  const map = new Map<string, SongScripture>();
-  if (!process.env.DATABASE_URL) return map;
-  try {
-    const { getDb } = await import("@/db");
-    const { songTags } = await import("@/db/schema");
-    const { ne } = await import("drizzle-orm");
-    const rows = await getDb().select().from(songTags).where(ne(songTags.status, "pending"));
-    for (const r of rows) {
-      const refs = (r.scriptureRefs as string[]) ?? [];
-      const themes = (r.themes as string[]) ?? [];
-      if (refs.length === 0 && themes.length === 0) continue;
-      map.set(r.title, { themes, refs, status: (r.status as "tagged" | "needs_review") });
+// Song tags change only when an admin tags a song, so cache the entries and refresh
+// via revalidateTag("song-tags"). unstable_cache can't serialize a Map, so we cache
+// a plain entries array and rebuild the Map per call (cheap).
+const loadEntries = unstable_cache(
+  async (): Promise<[string, SongScripture][]> => {
+    if (!process.env.DATABASE_URL) return [];
+    try {
+      const { getDb } = await import("@/db");
+      const { songTags } = await import("@/db/schema");
+      const { ne } = await import("drizzle-orm");
+      const rows = await getDb().select().from(songTags).where(ne(songTags.status, "pending"));
+      const entries: [string, SongScripture][] = [];
+      for (const r of rows) {
+        const refs = (r.scriptureRefs as string[]) ?? [];
+        const themes = (r.themes as string[]) ?? [];
+        if (refs.length === 0 && themes.length === 0) continue;
+        entries.push([r.title, { themes, refs, status: r.status as "tagged" | "needs_review" }]);
+      }
+      return entries;
+    } catch {
+      return [];
     }
-    return map;
-  } catch {
-    return map;
-  }
+  },
+  ["rhythm:song-scripture"],
+  { revalidate: 300, tags: ["song-tags"] },
+);
+
+export async function getSongScriptureMap(): Promise<Map<string, SongScripture>> {
+  return new Map(await loadEntries());
 }
 
 /** The book (+chapter) of a reference, e.g. "Genesis 1:1-25" → "genesis 1". */

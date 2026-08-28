@@ -1,14 +1,14 @@
 // Plain-language status presentation (handover section 5: Steady / Watch /
 // Elevated only — no ratios, no chart jargon).
 
-import type { Status } from "./assess";
+import type { Status, FlagDriver } from "./assess";
 
 export const STATUS_META: Record<
   Status,
   { label: string; color: string; ring: string; soft: string }
 > = {
   steady: {
-    label: "Steady",
+    label: "Healthy",
     color: "var(--color-mint)",
     ring: "linear-gradient(135deg, #38dd9b 0%, #5cc2ff 100%)",
     soft: "color-mix(in srgb, var(--color-mint) 16%, transparent)",
@@ -20,9 +20,19 @@ export const STATUS_META: Record<
     soft: "color-mix(in srgb, var(--color-amber) 18%, transparent)",
   },
   elevated: {
-    label: "Elevated",
-    color: "var(--color-pink)",
-    ring: "linear-gradient(135deg, #ff5c8a 0%, #8b6cff 100%)",
-    soft: "color-mix(in srgb, var(--color-pink) 18%, transparent)",
+    label: "Heavy load",
+    color: "var(--color-danger)",
+    ring: "linear-gradient(135deg, #f4425c 0%, #ff8a5c 100%)",
+    soft: "color-mix(in srgb, var(--color-danger) 18%, transparent)",
   },
 };
+
+/**
+ * The badge text for a person. Severity sets the colour (STATUS_META); the driver
+ * sharpens the word so an endurance flag reads "No break", not "Heavy load".
+ */
+export function statusLabel(status: Status, driver: FlagDriver): string {
+  if (status === "steady") return "Healthy";
+  if (status === "elevated") return driver === "endurance" ? "No break" : "Heavy load";
+  return driver === "endurance" ? "No break yet" : "Watch";
+}

@@ -6,6 +6,7 @@
 
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   date,
   index,
   integer,
@@ -88,15 +89,93 @@ export const pulseResponses = pgTable(
   (t) => [index("pulse_pco_idx").on(t.pcoId)],
 );
 
-/** App accounts. role: admin | leader | member. personId links to a person. */
+/** App accounts. role: admin | coach | leader | member. personId links a login to
+ *  their own person; `teams` lists the Planning Center teams a coach is responsible
+ *  for connecting with. */
 export const users = pgTable("users", {
   email: text("email").primaryKey(),
   name: text("name").notNull(),
+  phone: text("phone"),
   role: text("role").notNull().default("member"),
   personId: text("person_id"),
+  teams: jsonb("teams").$type<string[]>().default([]),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ── Volunteer connection platform ────────────────────────────────────────────
+// Admin-created teams + manually-added/imported volunteers. This is the primary
+// data source now (Planning Center is parked). Coaches are assigned to teams
+// many-to-many and work their connection plan off these rows.
+
+/** A team an admin creates. Volunteers and coaches attach to it. */
+export const teams = pgTable("teams", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  campus: text("campus"),
+  createdBy: text("created_by"),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/** A volunteer on a team. Contact details live inline (unlike the PCO model). */
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    email: text("email"),
+    phone: text("phone"),
+    birthday: date("birthday"),
+    role: text("role"),
+    active: boolean("active").notNull().default(true),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [index("team_members_team_idx").on(t.teamId)],
+);
+
+/** Coach ↔ team assignment (many-to-many). Source of truth for coach scoping. */
+export const teamCoaches = pgTable(
+  "team_coaches",
+  {
+    teamId: uuid("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+    coachEmail: text("coach_email").notNull(),
+  },
+  (t) => [
+    uniqueIndex("team_coach_uq").on(t.teamId, t.coachEmail),
+    index("team_coach_email_idx").on(t.coachEmail),
+  ],
+);
+
+/** Contact details + birthday per person. Kept apart from `people` (which is
+ *  replaced wholesale on each PCO sync) so manually-added/imported details survive.
+ *  source: pco | import | manual. */
+export const personContacts = pgTable("person_contacts", {
+  pcoId: text("pco_id").primaryKey(),
+  email: text("email"),
+  phone: text("phone"),
+  birthday: date("birthday"),
+  source: text("source").notNull().default("manual"),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/** A logged connection — a coach reached out to a person. The note is explicitly
+ *  FYI-for-next-time, not confidential record-keeping (enforced by UI copy). */
+export const connections = pgTable(
+  "connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pcoId: text("pco_id").notNull(),
+    coachEmail: text("coach_email").notNull(),
+    note: text("note"),
+    contactedAt: timestamp("contacted_at").defaultNow().notNull(),
+  },
+  (t) => [index("connections_pco_idx").on(t.pcoId), index("connections_coach_idx").on(t.coachEmail)],
+);
 
 /** Upcoming (future) services for the "your next service" view. Small forward
  *  window, replaced wholesale on each sync. `data` holds times, roster, songs. */
@@ -154,6 +233,19 @@ export const songTags = pgTable("song_tags", {
   taggedBy: text("tagged_by"),
   taggedAt: timestamp("tagged_at"),
   notes: text("notes"),
+});
+
+/** Pastoral follow-up state per person — deliberately structured, NOT free-text.
+ *  Records only *that* someone was contacted and the broad outcome, so care is
+ *  tracked without keeping written notes about a volunteer. One current row per
+ *  person, upserted by pastoral admins. outcome: null | 'all_well' | 'needs_support'. */
+export const pastoralChecks = pgTable("pastoral_checks", {
+  pcoId: text("pco_id").primaryKey(),
+  reachedOut: boolean("reached_out").notNull().default(false),
+  checkedIn: boolean("checked_in").notNull().default(false),
+  outcome: text("outcome"),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 /** Sync bookkeeping (last run + counts) per source. */
