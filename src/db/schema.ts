@@ -113,6 +113,7 @@ export const teams = pgTable("teams", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   campus: text("campus"),
+  pcoTeam: text("pco_team"), // linked Planning Center team (people.team) for member sync
   createdBy: text("created_by"),
   archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),

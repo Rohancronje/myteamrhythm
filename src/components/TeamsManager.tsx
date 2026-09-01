@@ -6,13 +6,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { TeamSummary, CoachRef } from "@/lib/data/teams-admin";
+import type { TeamSummary, CoachRef, PcoTeamOption } from "@/lib/data/teams-admin";
 
-export function TeamsManager({ teams, coaches }: { teams: TeamSummary[]; coaches: CoachRef[] }) {
+export function TeamsManager({ teams, coaches, pcoTeams }: { teams: TeamSummary[]; coaches: CoachRef[]; pcoTeams: PcoTeamOption[] }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [campus, setCampus] = useState("");
+  const [pcoTeam, setPcoTeam] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -28,11 +29,11 @@ export function TeamsManager({ teams, coaches }: { teams: TeamSummary[]; coaches
       const res = await fetch("/api/teams/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, campus, coachEmails: picked }),
+        body: JSON.stringify({ name, campus, pcoTeam: pcoTeam || null, coachEmails: picked }),
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Couldn't create the team.");
-      setCreating(false); setName(""); setCampus(""); setPicked([]);
+      setCreating(false); setName(""); setCampus(""); setPcoTeam(""); setPicked([]);
       if (json.id) router.push(`/teams/${json.id}`);
       else router.refresh();
     } catch (e) {
@@ -67,6 +68,21 @@ export function TeamsManager({ teams, coaches }: { teams: TeamSummary[]; coaches
               <input value={campus} onChange={(e) => setCampus(e.target.value)} placeholder="e.g. North Shore" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-faint" />
             </label>
           </div>
+
+          {pcoTeams.length > 0 && (
+            <div className="mt-3">
+              <span className="mb-1 block text-xs font-medium text-mute">Planning Center team <span className="text-faint">(optional — imports its members)</span></span>
+              <select
+                value={pcoTeam}
+                onChange={(e) => { setPcoTeam(e.target.value); if (!name.trim() && e.target.value) setName(e.target.value); }}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
+              >
+                <option value="">Don&apos;t link — add members manually</option>
+                {pcoTeams.map((p) => <option key={p.team} value={p.team}>{p.team} ({p.count})</option>)}
+              </select>
+              {pcoTeam && <p className="mt-1 text-[11px] text-faint">On create, everyone on &ldquo;{pcoTeam}&rdquo; in Planning Center will be pulled in.</p>}
+            </div>
+          )}
 
           <div className="mt-4">
             <span className="mb-2 block text-xs font-medium text-mute">Assign coaches <span className="text-faint">(optional — can do later)</span></span>

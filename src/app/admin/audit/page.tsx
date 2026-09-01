@@ -58,6 +58,7 @@ const ACTION_META: Record<string, { label: string; color: string }> = {
   "coach.reset": { label: "Coach password reset", color: "#5cc2ff" },
   "coach.remove": { label: "Coach removed", color: "#ff5c6a" },
   "team.create": { label: "Team created", color: "#38dd9b" },
+  "team.sync": { label: "Synced with Planning Center", color: "#5cc2ff" },
   "member.remove": { label: "Volunteer removed", color: "#ff5c6a" },
 };
 

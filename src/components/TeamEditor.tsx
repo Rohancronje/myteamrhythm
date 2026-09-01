@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MemberImport } from "./MemberImport";
-import type { TeamDetail, CoachRef, MemberRow, MemberInput } from "@/lib/data/teams-admin";
+import type { TeamDetail, CoachRef, MemberRow, MemberInput, PcoTeamOption } from "@/lib/data/teams-admin";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** Show a birthday as "6 Sep" — the stored year is irrelevant for birthdays. */
@@ -16,13 +16,30 @@ function formatBirthday(iso: string): string {
   return m ? `${Number(m[2])} ${MONTHS[Number(m[1]) - 1]}` : iso;
 }
 
-export function TeamEditor({ team, allCoaches }: { team: TeamDetail; allCoaches: CoachRef[] }) {
+export function TeamEditor({ team, allCoaches, pcoTeams }: { team: TeamDetail; allCoaches: CoachRef[]; pcoTeams: PcoTeamOption[] }) {
   const router = useRouter();
   const assigned = new Set(team.coaches.map((c) => c.email));
   const [picked, setPicked] = useState<string[]>([...assigned]);
   const [name, setName] = useState(team.name);
   const [campus, setCampus] = useState(team.campus ?? "");
   const [busy, setBusy] = useState(false);
+  const [pcoTeam, setPcoTeam] = useState(team.pcoTeam ?? "");
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  async function syncPco() {
+    setSyncBusy(true); setSyncMsg(null);
+    try {
+      const res = await fetch(`/api/teams/${team.id}/sync`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pcoTeam: pcoTeam || null }) });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "Sync failed");
+      setSyncMsg(`✓ Synced with “${data.pcoTeam}” — ${data.added} added, ${data.removed} removed, ${data.kept} kept.`);
+      router.refresh();
+    } catch (e) {
+      setSyncMsg(`Couldn't sync: ${(e as Error).message}`);
+    }
+    setSyncBusy(false);
+  }
 
   const coachesDirty = picked.length !== assigned.size || picked.some((e) => !assigned.has(e));
   const teamDirty = name.trim() !== team.name || (campus.trim() || null) !== (team.campus ?? null);
@@ -96,6 +113,26 @@ export function TeamEditor({ team, allCoaches }: { team: TeamDetail; allCoaches:
             })}
           </div>
         )}
+      </section>
+
+      {/* Planning Center sync */}
+      <section className="rise glass rounded-[var(--radius-card)] p-5">
+        <h2 className="text-sm font-semibold text-text">Planning Center</h2>
+        <p className="mt-1 text-xs text-mute">Link this team to a Planning Center team, then sync to pull in new people and drop anyone taken off it.</p>
+        {pcoTeams.length === 0 ? (
+          <p className="mt-3 text-xs text-faint">No Planning Center teams found yet — run a roster sync first.</p>
+        ) : (
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <select value={pcoTeam} onChange={(e) => setPcoTeam(e.target.value)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text sm:flex-1">
+              <option value="">Not linked</option>
+              {pcoTeams.map((p) => <option key={p.team} value={p.team}>{p.team} ({p.count})</option>)}
+            </select>
+            <button onClick={syncPco} disabled={syncBusy || !pcoTeam} className="shrink-0 rounded-full grad-brand px-5 py-2 text-xs font-bold text-white disabled:opacity-40">
+              {syncBusy ? "Syncing…" : "Sync with Planning Center"}
+            </button>
+          </div>
+        )}
+        {syncMsg && <p className="mt-2 break-words text-xs text-mute">{syncMsg}</p>}
       </section>
 
       {/* Import */}

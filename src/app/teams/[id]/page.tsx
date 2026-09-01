@@ -5,7 +5,7 @@ import { AppNav } from "@/components/AppNav";
 import { AccountChip } from "@/components/AccountChip";
 import { TeamEditor } from "@/components/TeamEditor";
 import { getSession } from "@/lib/auth/server";
-import { getTeamById, getAllCoaches } from "@/lib/data/teams-admin";
+import { getTeamById, getAllCoaches, getPcoTeams } from "@/lib/data/teams-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function TeamManagePage({ params }: PageProps<"/teams/[id]"
   if (session.role !== "admin") redirect("/connect");
 
   const { id } = await params;
-  const [team, coaches] = await Promise.all([getTeamById(id), getAllCoaches()]);
+  const [team, coaches, pcoTeams] = await Promise.all([getTeamById(id), getAllCoaches(), getPcoTeams()]);
   if (!team) notFound();
 
   return (
@@ -27,7 +27,7 @@ export default async function TeamManagePage({ params }: PageProps<"/teams/[id]"
         <AccountChip />
       </header>
 
-      <TeamEditor team={team} allCoaches={coaches} />
+      <TeamEditor team={team} allCoaches={coaches} pcoTeams={pcoTeams} />
 
       <AppNav />
     </main>

@@ -21,6 +21,7 @@ export interface TeamSummary {
   id: string;
   name: string;
   campus: string | null;
+  pcoTeam: string | null;
   memberCount: number;
   coaches: CoachRef[];
   contactedPct: number;
@@ -29,8 +30,34 @@ export interface TeamDetail {
   id: string;
   name: string;
   campus: string | null;
+  pcoTeam: string | null;
   members: MemberRow[];
   coaches: CoachRef[];
+}
+export interface PcoTeamOption {
+  team: string; // Planning Center team name (people.team)
+  count: number; // people currently on it
+}
+export interface PcoSyncResult {
+  ok: boolean;
+  error?: string;
+  pcoTeam?: string;
+  added?: number;
+  removed?: number;
+  kept?: number;
+}
+
+/** Normalise a name for matching Connect members to PCO people (drop nicknames /
+ *  quotes / punctuation, lowercase). Mirrors the serving-link matcher. */
+function normName(name: string): string {
+  return name
+    .replace(/["'“”‘’][^"'“”‘’]*["'“”‘’]/g, " ")
+    .replace(/\(([^)]*)\)/g, " ")
+    .replace(/[^\p{L}\s]/gu, " ")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(" ");
 }
 export interface MemberInput {
   name: string;
@@ -167,6 +194,68 @@ export async function getAllCoaches(): Promise<CoachRef[]> {
   return rows.map((r) => ({ email: r.email, name: r.name }));
 }
 
+/** Distinct Planning Center teams (from the synced roster) an admin can link a
+ *  Connect team to, so member sync knows which PCO team to mirror. */
+export async function getPcoTeams(): Promise<PcoTeamOption[]> {
+  if (!process.env.DATABASE_URL) return [];
+  try {
+    const { people } = await import("@/db/schema");
+    const { sql, isNotNull } = await import("drizzle-orm");
+    const rows = await (await db())
+      .select({ team: people.team, count: sql<number>`count(*)::int` })
+      .from(people)
+      .where(isNotNull(people.team))
+      .groupBy(people.team);
+    return rows
+      .filter((r) => r.team && r.team.trim())
+      .map((r) => ({ team: r.team, count: Number(r.count) }))
+      .sort((a, b) => a.team.localeCompare(b.team));
+  } catch {
+    return [];
+  }
+}
+
+/** Reconcile a Connect team's volunteers against its linked Planning Center team:
+ *  add PCO people who aren't on it, deactivate members no longer on the PCO team.
+ *  Matching is by normalised name. If `pcoTeam` is passed, (re)link it first. */
+export async function syncTeamWithPco(teamId: string, pcoTeam?: string): Promise<PcoSyncResult> {
+  if (!process.env.DATABASE_URL) return { ok: false, error: "No database configured." };
+  const { teams, teamMembers, people } = await import("@/db/schema");
+  const { eq } = await import("drizzle-orm");
+  const d = await db();
+
+  if (pcoTeam !== undefined) await d.update(teams).set({ pcoTeam: pcoTeam || null }).where(eq(teams.id, teamId));
+  const [team] = await d.select().from(teams).where(eq(teams.id, teamId));
+  if (!team) return { ok: false, error: "Team not found." };
+  if (!team.pcoTeam) return { ok: false, error: "Link a Planning Center team first." };
+
+  const [pcoPeople, current] = await Promise.all([
+    d.select({ name: people.name }).from(people).where(eq(people.team, team.pcoTeam)),
+    d.select().from(teamMembers).where(eq(teamMembers.teamId, teamId)),
+  ]);
+
+  const pcoByKey = new Map<string, string>();
+  for (const p of pcoPeople) { const k = normName(p.name); if (k) pcoByKey.set(k, p.name); }
+  const currentByKey = new Map<string, (typeof current)[number]>();
+  for (const m of current) currentByKey.set(normName(m.name), m);
+
+  let added = 0, removed = 0, kept = 0;
+  const toInsert: (typeof teamMembers.$inferInsert)[] = [];
+  for (const [key, name] of pcoByKey) {
+    const ex = currentByKey.get(key);
+    if (!ex) { toInsert.push({ teamId, name, active: true }); added++; }
+    else { if (!ex.active) await d.update(teamMembers).set({ active: true }).where(eq(teamMembers.id, ex.id)); kept++; }
+  }
+  if (toInsert.length) await d.insert(teamMembers).values(toInsert);
+  for (const m of current) {
+    if (m.active && !pcoByKey.has(normName(m.name))) {
+      await d.update(teamMembers).set({ active: false }).where(eq(teamMembers.id, m.id));
+      removed++;
+    }
+  }
+  return { ok: true, pcoTeam: team.pcoTeam, added, removed, kept };
+}
+
 /** All non-archived teams with counts, coaches, and this-cycle contacted-%. */
 export async function listTeams(): Promise<TeamSummary[]> {
   if (!process.env.DATABASE_URL) return [];
@@ -200,6 +289,7 @@ export async function listTeams(): Promise<TeamSummary[]> {
         id: t.id,
         name: t.name,
         campus: t.campus,
+        pcoTeam: t.pcoTeam,
         memberCount: members.length,
         coaches,
         contactedPct: members.length ? Math.round((contacted / members.length) * 100) : 0,
@@ -237,6 +327,7 @@ export async function getTeamById(id: string): Promise<TeamDetail | null> {
     id: team.id,
     name: team.name,
     campus: team.campus,
+    pcoTeam: team.pcoTeam,
     members: members
       .map((m): MemberRow => ({ id: m.id, teamId: m.teamId, name: m.name, email: m.email, phone: m.phone, birthday: m.birthday, role: m.role }))
       .sort((a, b) => a.name.localeCompare(b.name)),
@@ -245,21 +336,22 @@ export async function getTeamById(id: string): Promise<TeamDetail | null> {
 }
 
 /** Create a team and (optionally) assign coaches. Returns the new team id. */
-export async function createTeam(input: { name: string; campus?: string | null; coachEmails?: string[]; createdBy?: string }): Promise<string> {
+export async function createTeam(input: { name: string; campus?: string | null; pcoTeam?: string | null; coachEmails?: string[]; createdBy?: string }): Promise<string> {
   const { teams, teamCoaches } = await import("@/db/schema");
   const d = await db();
-  const [row] = await d.insert(teams).values({ name: input.name.trim(), campus: clean(input.campus), createdBy: input.createdBy ?? null }).returning({ id: teams.id });
+  const [row] = await d.insert(teams).values({ name: input.name.trim(), campus: clean(input.campus), pcoTeam: clean(input.pcoTeam), createdBy: input.createdBy ?? null }).returning({ id: teams.id });
   const emails = [...new Set((input.coachEmails ?? []).map((e) => e.trim().toLowerCase()).filter(Boolean))];
   if (emails.length) await d.insert(teamCoaches).values(emails.map((coachEmail) => ({ teamId: row.id, coachEmail })));
   return row.id;
 }
 
-export async function updateTeam(id: string, fields: { name?: string; campus?: string | null }): Promise<void> {
+export async function updateTeam(id: string, fields: { name?: string; campus?: string | null; pcoTeam?: string | null }): Promise<void> {
   const { teams } = await import("@/db/schema");
   const { eq } = await import("drizzle-orm");
   const patch: Record<string, unknown> = {};
   if (fields.name !== undefined) patch.name = fields.name.trim();
   if (fields.campus !== undefined) patch.campus = clean(fields.campus);
+  if (fields.pcoTeam !== undefined) patch.pcoTeam = clean(fields.pcoTeam);
   if (Object.keys(patch).length) await (await db()).update(teams).set(patch).where(eq(teams.id, id));
 }
 

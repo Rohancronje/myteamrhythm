@@ -6,6 +6,7 @@ import { createTeam } from "@/lib/data/teams-admin";
 const Input = z.object({
   name: z.string().min(1).max(120),
   campus: z.string().max(120).optional().nullable(),
+  pcoTeam: z.string().max(160).optional().nullable(),
   coachEmails: z.array(z.string().email()).max(50).optional(),
 });
 
@@ -18,9 +19,19 @@ export async function POST(req: Request) {
 
   try {
     const id = await createTeam({ ...parsed.data, createdBy: session.email });
+    // If linked to a Planning Center team, import its members straight away.
+    let synced: Awaited<ReturnType<typeof import("@/lib/data/teams-admin").syncTeamWithPco>> | undefined;
+    if (parsed.data.pcoTeam) {
+      const { syncTeamWithPco } = await import("@/lib/data/teams-admin");
+      synced = await syncTeamWithPco(id);
+    }
     const { logAudit } = await import("@/lib/data/audit");
-    await logAudit("team.create", { actor: { email: session.email, name: session.name }, target: parsed.data.name, detail: `Team created${parsed.data.campus ? ` · ${parsed.data.campus}` : ""}` });
-    return NextResponse.json({ ok: true, id });
+    await logAudit("team.create", {
+      actor: { email: session.email, name: session.name },
+      target: parsed.data.name,
+      detail: `Team created${parsed.data.pcoTeam ? ` · linked to PCO "${parsed.data.pcoTeam}"${synced?.ok ? ` (+${synced.added} imported)` : ""}` : parsed.data.campus ? ` · ${parsed.data.campus}` : ""}`,
+    });
+    return NextResponse.json({ ok: true, id, synced });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }
