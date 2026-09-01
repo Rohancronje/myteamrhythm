@@ -23,17 +23,18 @@ export function TeamEditor({ team, allCoaches, pcoTeams }: { team: TeamDetail; a
   const [name, setName] = useState(team.name);
   const [campus, setCampus] = useState(team.campus ?? "");
   const [busy, setBusy] = useState(false);
-  const [pcoTeam, setPcoTeam] = useState(team.pcoTeam ?? "");
+  const [pickedPco, setPickedPco] = useState<string[]>(team.pcoTeams ?? []);
+  const togglePco = (t: string) => setPickedPco((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   async function syncPco() {
     setSyncBusy(true); setSyncMsg(null);
     try {
-      const res = await fetch(`/api/teams/${team.id}/sync`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pcoTeam: pcoTeam || null }) });
+      const res = await fetch(`/api/teams/${team.id}/sync`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pcoTeams: pickedPco }) });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Sync failed");
-      setSyncMsg(`✓ Synced with “${data.pcoTeam}” — ${data.added} added, ${data.removed} removed, ${data.kept} kept.`);
+      setSyncMsg(`✓ Synced with ${(data.pcoTeams ?? []).join(", ")} — ${data.added} added, ${data.removed} removed, ${data.kept} kept.`);
       router.refresh();
     } catch (e) {
       setSyncMsg(`Couldn't sync: ${(e as Error).message}`);
@@ -122,15 +123,21 @@ export function TeamEditor({ team, allCoaches, pcoTeams }: { team: TeamDetail; a
         {pcoTeams.length === 0 ? (
           <p className="mt-3 text-xs text-faint">No Planning Center teams found yet — run a roster sync first.</p>
         ) : (
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <select value={pcoTeam} onChange={(e) => setPcoTeam(e.target.value)} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text sm:flex-1">
-              <option value="">Not linked</option>
-              {pcoTeams.map((p) => <option key={p.team} value={p.team}>{p.team} ({p.count})</option>)}
-            </select>
-            <button onClick={syncPco} disabled={syncBusy || !pcoTeam} className="shrink-0 rounded-full grad-brand px-5 py-2 text-xs font-bold text-white disabled:opacity-40">
-              {syncBusy ? "Syncing…" : "Sync with Planning Center"}
+          <>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {pcoTeams.map((p) => {
+                const on = pickedPco.includes(p.team);
+                return (
+                  <button type="button" key={p.team} onClick={() => togglePco(p.team)} className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors" style={on ? { background: "var(--grad-brand)", color: "white", borderColor: "transparent" } : { borderColor: "var(--color-border)", color: "var(--color-mute)" }}>
+                    {p.team} <span className="opacity-70">({p.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button onClick={syncPco} disabled={syncBusy || pickedPco.length === 0} className="mt-3 rounded-full grad-brand px-5 py-2 text-xs font-bold text-white disabled:opacity-40">
+              {syncBusy ? "Syncing…" : `Sync with Planning Center${pickedPco.length ? ` (${pickedPco.length})` : ""}`}
             </button>
-          </div>
+          </>
         )}
         {syncMsg && <p className="mt-2 break-words text-xs text-mute">{syncMsg}</p>}
       </section>

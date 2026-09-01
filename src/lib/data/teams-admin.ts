@@ -21,7 +21,7 @@ export interface TeamSummary {
   id: string;
   name: string;
   campus: string | null;
-  pcoTeam: string | null;
+  pcoTeams: string[];
   memberCount: number;
   coaches: CoachRef[];
   contactedPct: number;
@@ -30,7 +30,7 @@ export interface TeamDetail {
   id: string;
   name: string;
   campus: string | null;
-  pcoTeam: string | null;
+  pcoTeams: string[];
   members: MemberRow[];
   coaches: CoachRef[];
 }
@@ -41,7 +41,7 @@ export interface PcoTeamOption {
 export interface PcoSyncResult {
   ok: boolean;
   error?: string;
-  pcoTeam?: string;
+  pcoTeams?: string[];
   added?: number;
   removed?: number;
   kept?: number;
@@ -218,19 +218,23 @@ export async function getPcoTeams(): Promise<PcoTeamOption[]> {
 /** Reconcile a Connect team's volunteers against its linked Planning Center team:
  *  add PCO people who aren't on it, deactivate members no longer on the PCO team.
  *  Matching is by normalised name. If `pcoTeam` is passed, (re)link it first. */
-export async function syncTeamWithPco(teamId: string, pcoTeam?: string): Promise<PcoSyncResult> {
+export async function syncTeamWithPco(teamId: string, pcoTeams?: string[]): Promise<PcoSyncResult> {
   if (!process.env.DATABASE_URL) return { ok: false, error: "No database configured." };
   const { teams, teamMembers, people } = await import("@/db/schema");
-  const { eq } = await import("drizzle-orm");
+  const { eq, inArray } = await import("drizzle-orm");
   const d = await db();
 
-  if (pcoTeam !== undefined) await d.update(teams).set({ pcoTeam: pcoTeam || null }).where(eq(teams.id, teamId));
+  if (pcoTeams !== undefined) {
+    const cleaned = [...new Set(pcoTeams.map((t) => t.trim()).filter(Boolean))];
+    await d.update(teams).set({ pcoTeams: cleaned }).where(eq(teams.id, teamId));
+  }
   const [team] = await d.select().from(teams).where(eq(teams.id, teamId));
   if (!team) return { ok: false, error: "Team not found." };
-  if (!team.pcoTeam) return { ok: false, error: "Link a Planning Center team first." };
+  const linked = team.pcoTeams ?? [];
+  if (!linked.length) return { ok: false, error: "Link at least one Planning Center team first." };
 
   const [pcoPeople, current] = await Promise.all([
-    d.select({ name: people.name }).from(people).where(eq(people.team, team.pcoTeam)),
+    d.select({ name: people.name }).from(people).where(inArray(people.team, linked)),
     d.select().from(teamMembers).where(eq(teamMembers.teamId, teamId)),
   ]);
 
@@ -253,7 +257,7 @@ export async function syncTeamWithPco(teamId: string, pcoTeam?: string): Promise
       removed++;
     }
   }
-  return { ok: true, pcoTeam: team.pcoTeam, added, removed, kept };
+  return { ok: true, pcoTeams: linked, added, removed, kept };
 }
 
 /** All non-archived teams with counts, coaches, and this-cycle contacted-%. */
@@ -289,7 +293,7 @@ export async function listTeams(): Promise<TeamSummary[]> {
         id: t.id,
         name: t.name,
         campus: t.campus,
-        pcoTeam: t.pcoTeam,
+        pcoTeams: t.pcoTeams ?? [],
         memberCount: members.length,
         coaches,
         contactedPct: members.length ? Math.round((contacted / members.length) * 100) : 0,
@@ -327,7 +331,7 @@ export async function getTeamById(id: string): Promise<TeamDetail | null> {
     id: team.id,
     name: team.name,
     campus: team.campus,
-    pcoTeam: team.pcoTeam,
+    pcoTeams: team.pcoTeams ?? [],
     members: members
       .map((m): MemberRow => ({ id: m.id, teamId: m.teamId, name: m.name, email: m.email, phone: m.phone, birthday: m.birthday, role: m.role }))
       .sort((a, b) => a.name.localeCompare(b.name)),
@@ -336,22 +340,23 @@ export async function getTeamById(id: string): Promise<TeamDetail | null> {
 }
 
 /** Create a team and (optionally) assign coaches. Returns the new team id. */
-export async function createTeam(input: { name: string; campus?: string | null; pcoTeam?: string | null; coachEmails?: string[]; createdBy?: string }): Promise<string> {
+export async function createTeam(input: { name: string; campus?: string | null; pcoTeams?: string[]; coachEmails?: string[]; createdBy?: string }): Promise<string> {
   const { teams, teamCoaches } = await import("@/db/schema");
   const d = await db();
-  const [row] = await d.insert(teams).values({ name: input.name.trim(), campus: clean(input.campus), pcoTeam: clean(input.pcoTeam), createdBy: input.createdBy ?? null }).returning({ id: teams.id });
+  const pcoTeams = [...new Set((input.pcoTeams ?? []).map((t) => t.trim()).filter(Boolean))];
+  const [row] = await d.insert(teams).values({ name: input.name.trim(), campus: clean(input.campus), pcoTeams, createdBy: input.createdBy ?? null }).returning({ id: teams.id });
   const emails = [...new Set((input.coachEmails ?? []).map((e) => e.trim().toLowerCase()).filter(Boolean))];
   if (emails.length) await d.insert(teamCoaches).values(emails.map((coachEmail) => ({ teamId: row.id, coachEmail })));
   return row.id;
 }
 
-export async function updateTeam(id: string, fields: { name?: string; campus?: string | null; pcoTeam?: string | null }): Promise<void> {
+export async function updateTeam(id: string, fields: { name?: string; campus?: string | null; pcoTeams?: string[] }): Promise<void> {
   const { teams } = await import("@/db/schema");
   const { eq } = await import("drizzle-orm");
   const patch: Record<string, unknown> = {};
   if (fields.name !== undefined) patch.name = fields.name.trim();
   if (fields.campus !== undefined) patch.campus = clean(fields.campus);
-  if (fields.pcoTeam !== undefined) patch.pcoTeam = clean(fields.pcoTeam);
+  if (fields.pcoTeams !== undefined) patch.pcoTeams = [...new Set(fields.pcoTeams.map((t) => t.trim()).filter(Boolean))];
   if (Object.keys(patch).length) await (await db()).update(teams).set(patch).where(eq(teams.id, id));
 }
 
