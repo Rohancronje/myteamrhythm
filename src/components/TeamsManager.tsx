@@ -109,7 +109,7 @@ export function TeamsManager({ teams, coaches }: { teams: TeamSummary[]; coaches
                 </div>
                 <span className="shrink-0 font-display text-2xl font-bold grad-text">{t.contactedPct}%</span>
               </div>
-              <p className="mt-3 text-sm text-mute">{t.memberCount} {t.memberCount === 1 ? "volunteer" : "volunteers"} · connected this cycle</p>
+              <p className="mt-3 text-sm text-mute">{t.memberCount} {t.memberCount === 1 ? "volunteer" : "volunteers"} · connected this month</p>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {t.coaches.length === 0 ? (
                   <span className="rounded-full border border-dashed border-border-strong px-2.5 py-1 text-[11px] text-faint">No coach assigned</span>

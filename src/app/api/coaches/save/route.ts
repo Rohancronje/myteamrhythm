@@ -48,10 +48,14 @@ export async function POST(req: Request) {
   }
 
   // Email the coach their invite (fails soft — the account is created either way,
-  // so the admin can still share the password by hand if email bounces).
-  const { sendEmail, coachInviteEmail } = await import("@/lib/email");
-  const { subject, html } = coachInviteEmail({ coachName: name, inviterName: session.name, teams: p.teams ?? [], email: p.email, password: p.password });
-  const mail = await sendEmail({ to: p.email, toName: name, subject, html });
-
-  return NextResponse.json({ ok: true, emailed: mail.ok, emailError: mail.ok ? undefined : mail.error });
+  // so the admin can still share the password by hand if email bounces). Wrapped so an
+  // email error returns JSON, not a 500 HTML page the client can't parse.
+  try {
+    const { sendEmail, coachInviteEmail } = await import("@/lib/email");
+    const { subject, html } = coachInviteEmail({ coachName: name, inviterName: session.name, teams: p.teams ?? [], email: p.email, password: p.password });
+    const mail = await sendEmail({ to: p.email, toName: name, subject, html });
+    return NextResponse.json({ ok: true, emailed: mail.ok, emailError: mail.ok ? undefined : mail.error });
+  } catch (e) {
+    return NextResponse.json({ ok: true, emailed: false, emailError: (e as Error).message });
+  }
 }

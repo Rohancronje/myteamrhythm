@@ -35,10 +35,16 @@ export async function POST(req: Request) {
   }
 
   if (notify) {
-    const { sendEmail, passwordResetEmail } = await import("@/lib/email");
-    const { subject, html } = passwordResetEmail({ name, inviterName: session.name, email, password });
-    const mail = await sendEmail({ to: email, toName: name, subject, html });
-    return NextResponse.json({ ok: true, emailed: mail.ok, emailError: mail.ok ? undefined : mail.error });
+    // The password is already reset; never let an email hiccup turn this into a 500
+    // (which Vercel renders as HTML — the source of the "not valid JSON" error).
+    try {
+      const { sendEmail, passwordResetEmail } = await import("@/lib/email");
+      const { subject, html } = passwordResetEmail({ name, inviterName: session.name, email, password });
+      const mail = await sendEmail({ to: email, toName: name, subject, html });
+      return NextResponse.json({ ok: true, emailed: mail.ok, emailError: mail.ok ? undefined : mail.error });
+    } catch (e) {
+      return NextResponse.json({ ok: true, emailed: false, emailError: (e as Error).message });
+    }
   }
   return NextResponse.json({ ok: true });
 }

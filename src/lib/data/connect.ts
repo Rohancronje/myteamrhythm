@@ -1,18 +1,18 @@
-// The coach "connect" engine. Builds a rolling 4-week connection plan for a coach's
-// team(s): who to reach out to today, a contacted-% for the current cycle, and
+// The coach "connect" engine. Builds a monthly connection plan for a coach's
+// team(s): who to reach out to today, a contacted-% for the current month, and
 // per-person context (last contact, last FYI note, birthday).
 //
 // Data source: admin-managed teams + volunteers (Planning Center is parked). Cadence:
-// every member should be connected with once per 4-week cycle. "Due" = never contacted,
-// or last contacted 28+ days ago. Today's list surfaces the most-overdue due people,
+// every member should be connected with once per CALENDAR MONTH — the plan resets on
+// the 1st, so at the start of a month everyone is "due" again. "Due" = never contacted,
+// or not yet contacted this month. Today's list surfaces the most-overdue due people,
 // capped to an even daily pace so the coach isn't handed the whole team at once.
 
 import { daysUntilBirthday } from "./contacts";
-import { getServingIndex, type ServeRef } from "./serving";
+import { getServingIndex, type ServeRef, type ServeLoad } from "./serving";
 import { VERSES, weekIndex, type Verse } from "./verses";
 
-const CYCLE_DAYS = 28;
-const WORKING_DAYS = 20; // ~4 weeks of weekdays — spreads the roster into a daily pace
+const WORKING_DAYS = 20; // ~a month of weekdays — spreads the roster into a daily pace
 
 export interface ConnectPerson {
   id: string;
@@ -35,7 +35,7 @@ export interface ConnectPerson {
   verse: Verse | null; // suggested verse to send this week
   // Planning Center serving context — null when the member isn't matched to a PCO
   // person; last/next are null when matched but with no history / not rostered.
-  serving: { last: ServeRef | null; next: ServeRef | null } | null;
+  serving: { last: ServeRef | null; next: ServeRef | null; load: ServeLoad | null } | null;
 }
 
 export interface CoachConnect {
@@ -137,8 +137,11 @@ export async function getCoachConnect(teamIds: string[] | undefined, now: Date, 
   const coachNames = await loadCoachNames([...new Set([...conns.values()].flat().map((c) => c.coachEmail))]);
   const nameOf = (email: string) => coachNames.get(email) ?? email.split("@")[0];
   // Planning Center serving links (last serve / next serving), matched by name.
-  const { nzToday } = await import("@/lib/time");
+  const { nzToday, nzDateOf } = await import("@/lib/time");
   const [serving, todayISO] = [await getServingIndex(), nzToday()];
+  // The cycle is a calendar month — it resets on the 1st (NZ), so a contact "counts"
+  // only if it happened on or after the first of the current month.
+  const monthStart = todayISO.slice(0, 7) + "-01"; // e.g. "2026-09-01"
 
   // Weekly verse suggestion — assigned by position WITHIN each team so no two
   // teammates share a verse this week; rotates every Monday. (Computed before the
@@ -161,10 +164,11 @@ export async function getCoachConnect(teamIds: string[] | undefined, now: Date, 
     const last = history[0] ?? null;
     const lastContacted = last ? last.contactedAt.toISOString() : null;
     const daysSince = last ? Math.floor((now.getTime() - last.contactedAt.getTime()) / 86_400_000) : null;
-    const contactedThisCycle = daysSince !== null && daysSince < CYCLE_DAYS;
-    // Did the viewer personally reach this person within the current cycle?
+    // "This cycle" = this calendar month: the most recent contact is dated this month (NZ).
+    const contactedThisCycle = !!last && nzDateOf(last.contactedAt.toISOString()) >= monthStart;
+    // Did the viewer personally reach this person this month?
     const reachedByYouThisCycle = !!viewerEmail && history.some(
-      (h) => h.coachEmail === viewerEmail && (now.getTime() - h.contactedAt.getTime()) / 86_400_000 < CYCLE_DAYS,
+      (h) => h.coachEmail === viewerEmail && nzDateOf(h.contactedAt.toISOString()) >= monthStart,
     );
     return {
       id: m.id,
@@ -188,7 +192,7 @@ export async function getCoachConnect(teamIds: string[] | undefined, now: Date, 
       verse: verseOf.get(m.id) ?? null,
       serving: (() => {
         const pcoId = serving.pcoIdFor(m.name);
-        return pcoId ? { last: serving.lastServe(pcoId, todayISO), next: serving.nextServe(pcoId) } : null;
+        return pcoId ? { last: serving.lastServe(pcoId, todayISO), next: serving.nextServe(pcoId), load: serving.load6w(pcoId, todayISO) } : null;
       })(),
     };
   });

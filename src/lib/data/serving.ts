@@ -19,6 +19,26 @@ export interface ServeRef {
   position: string; // roster position / sub-team
 }
 
+export interface ServeLoad {
+  serves: number; // services this person served in the trailing window
+  total: number; // total services held in the window (the denominator)
+  pct: number; // 0..1, serves / total
+  band: "light" | "busy" | "high"; // high = burnout-watch (see thresholds below)
+  weeks: number; // window length (6)
+}
+
+const LOAD_WEEKS = 6;
+// Thresholds are grounded in the roster's real distribution over a 6-week window
+// (~17 services; median 3, p90 7): >=40% of services is the top ~10% of servers.
+const HIGH_PCT = 0.4;
+const BUSY_PCT = 0.2;
+
+function minusDays(iso: string, n: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
 interface PcoPerson {
   pcoId: string;
   name: string;
@@ -65,6 +85,8 @@ export interface ServingIndex {
   lastServe(pcoId: string, today: string): ServeRef | null;
   /** Soonest upcoming service the person is rostered on. */
   nextServe(pcoId: string): ServeRef | null;
+  /** How many services they served in the trailing 6 weeks, vs. the total held. */
+  load6w(pcoId: string, today: string): ServeLoad | null;
 }
 
 /** Build the serving index once (name→person, last serve, next serve). Returns an
@@ -82,6 +104,20 @@ export async function getServingIndex(): Promise<ServingIndex> {
       s.add(p.pcoId);
       byName.set(v, s);
     }
+  }
+
+  // A "service" is one date + service-type (events carry no plan id). Memoise the
+  // window's total service count per cutoff so we compute it once, not per person.
+  const windowTotalMemo = new Map<string, number>();
+  function totalServices(cutoff: string, today: string): number {
+    const cached = windowTotalMemo.get(cutoff);
+    if (cached !== undefined) return cached;
+    const set = new Set<string>();
+    for (const p of people) for (const e of p.events) {
+      if (e.status === "confirmed" && e.date >= cutoff && e.date <= today) set.add(`${e.date}|${e.serviceType}`);
+    }
+    windowTotalMemo.set(cutoff, set.size);
+    return set.size;
   }
 
   // Upcoming is soonest-first, so the first roster hit for a person is their next serve.
@@ -111,6 +147,20 @@ export async function getServingIndex(): Promise<ServingIndex> {
     },
     nextServe(pcoId: string): ServeRef | null {
       return nextByPco.get(pcoId) ?? null;
+    },
+    load6w(pcoId: string, today: string): ServeLoad | null {
+      const p = byId.get(pcoId);
+      if (!p) return null;
+      const cutoff = minusDays(today, LOAD_WEEKS * 7);
+      const total = totalServices(cutoff, today);
+      const set = new Set<string>();
+      for (const e of p.events) {
+        if (e.status === "confirmed" && e.date >= cutoff && e.date <= today) set.add(`${e.date}|${e.serviceType}`);
+      }
+      const serves = set.size;
+      const pct = total ? serves / total : 0;
+      const band: ServeLoad["band"] = pct >= HIGH_PCT ? "high" : pct >= BUSY_PCT ? "busy" : "light";
+      return { serves, total, pct, band, weeks: LOAD_WEEKS };
     },
   };
 }

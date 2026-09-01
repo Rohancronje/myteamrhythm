@@ -1,29 +1,32 @@
 "use client";
 
-// The coach's connection workspace. A rolling 4-week plan: who to reach out to
-// today, progress through the cycle, quick call/text/email, and a short FYI note
+// The coach's connection workspace. A monthly plan: who to reach out to
+// today, progress through the month, quick call/text/email, and a short FYI note
 // (explicitly NOT confidential record-keeping) to prime the next conversation.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CoachConnect, ConnectPerson } from "@/lib/data/connect";
-import type { ServeRef } from "@/lib/data/serving";
+import type { ServeRef, ServeLoad } from "@/lib/data/serving";
 import { daysFromToday } from "@/lib/time";
 
 export function ConnectDashboard({ data }: { data: CoachConnect }) {
-  const shownIds = new Set([...data.today, ...data.doneToday].map((p) => p.id));
-  const rest = data.people.filter((p) => !shownIds.has(p.id));
+  // Only the active "to connect today" cards are lifted out of the full roster.
+  // Everyone else — including people already reached today or earlier this month —
+  // stays in the list below so they remain tappable to open their card.
+  const todayIds = new Set(data.today.map((p) => p.id));
+  const rest = data.people.filter((p) => !todayIds.has(p.id));
   return (
     <div className="space-y-7">
       {/* Cycle progress */}
       <section className="rise glass-edge relative overflow-hidden rounded-[var(--radius-card)] p-6">
         <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-purple/25 blur-3xl" />
-        <p className="relative mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/75">This 4-week cycle{data.coachCount > 1 ? " · as a team" : ""}</p>
+        <p className="relative mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/75">This month{data.coachCount > 1 ? " · as a team" : ""}</p>
         <div className="relative flex items-end justify-between gap-4">
           <p className="text-[22px] font-medium leading-[1.35] text-text text-balance">
             {data.coachCount > 1 ? "Your team has" : "You’ve"} connected with{" "}
             <span className="font-display font-bold grad-text">{data.contactedCount} of {data.total}</span>{" "}
-            {data.total === 1 ? "person" : "people"} this cycle.
+            {data.total === 1 ? "person" : "people"} this month.
           </p>
           <span className="shrink-0 font-display text-4xl font-bold text-text">{data.contactedPct}%</span>
         </div>
@@ -38,7 +41,7 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
           </p>
         )}
         {data.contactedCount === 0 && (
-          <p className="relative mt-3 text-xs text-mute">Fresh cycle — no one reached yet. Start with today&apos;s list below.</p>
+          <p className="relative mt-3 text-xs text-mute">Fresh month — no one reached yet. Start with today&apos;s list below.</p>
         )}
       </section>
 
@@ -48,10 +51,10 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
         <StatTile
           label={data.coachCount > 1 ? "Team connected" : "Connected"}
           value={`${data.contactedPct}%`}
-          sub={data.coachCount > 1 ? `${data.contactedByYouCount} by you · ${data.contactedCount} total` : `${data.contactedCount} this cycle`}
+          sub={data.coachCount > 1 ? `${data.contactedByYouCount} by you · ${data.contactedCount} total` : `${data.contactedCount} this month`}
         />
         <StatTile label="Left today" value={`${data.today.length}`} sub={`${data.doneToday.length} reached today`} />
-        <StatTile label="Still to reach" value={`${data.people.filter((p) => p.due).length}`} sub="this cycle" />
+        <StatTile label="Still to reach" value={`${data.people.filter((p) => p.due).length}`} sub="this month" />
       </section>
 
       {/* Birthdays soon */}
@@ -156,6 +159,32 @@ function relServe(d: string): string {
   if (n === 1) return "tomorrow";
   if (n === -1) return "yesterday";
   return n > 0 ? `in ${n}d` : `${-n}d ago`;
+}
+
+/** Trailing 6-week serving load, with a burnout-watch band. High = the person is
+ *  serving >=40% of all services held (top ~10% of the roster). */
+function LoadMeter({ load }: { load: ServeLoad }) {
+  const c =
+    load.band === "high"
+      ? { label: "High load", color: "#ff6b6b" }
+      : load.band === "busy"
+        ? { label: "Busy", color: "#ffb454" }
+        : { label: "Healthy", color: "#38dd9b" };
+  return (
+    <div className="mb-3 rounded-xl border border-border bg-surface-solid p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mute">Serving load · last {load.weeks} wks</p>
+        <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `color-mix(in srgb, ${c.color} 20%, transparent)`, color: c.color }}>{c.label}</span>
+      </div>
+      <p className="mt-1.5 text-sm">
+        <span className="font-display text-lg font-bold text-text">{load.serves}</span>
+        <span className="text-mute"> of {load.total} services · {Math.round(load.pct * 100)}%</span>
+      </p>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+        <div className="h-full rounded-full" style={{ width: `${Math.max(4, Math.round(load.pct * 100))}%`, background: c.color }} />
+      </div>
+    </div>
+  );
 }
 
 /** One serving stat (last serve / next serving) with a graceful empty state. */
@@ -263,6 +292,7 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
               <ServeStat kind="Next serving" serve={p.serving.next} empty="Not rostered" />
             </div>
           )}
+          {p.serving?.load && <LoadMeter load={p.serving.load} />}
 
           {/* Quick contact actions */}
           <div className="flex flex-wrap gap-2">

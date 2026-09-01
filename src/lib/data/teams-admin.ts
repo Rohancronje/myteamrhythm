@@ -2,7 +2,7 @@
 // coach assignments. This is the primary data source now (Planning Center parked).
 // Reads are fresh (admin surface, low traffic) so edits show immediately.
 
-const CYCLE_DAYS = 28;
+import { nzToday, nzDateOf } from "@/lib/time";
 
 export interface MemberRow {
   id: string;
@@ -140,6 +140,24 @@ export async function getCoachCandidates(): Promise<CoachCandidate[]> {
   return [...byEmail.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** True if the coach is assigned to a team whose name marks it as worship — used to
+ *  show them the NS Worship Team's Songs Insights. Admins see it regardless. */
+export async function isWorshipCoach(email: string): Promise<boolean> {
+  if (!process.env.DATABASE_URL) return false;
+  try {
+    const { teams, teamCoaches } = await import("@/db/schema");
+    const { eq, and, ilike } = await import("drizzle-orm");
+    const rows = await (await db())
+      .select({ id: teams.id })
+      .from(teamCoaches)
+      .innerJoin(teams, eq(teams.id, teamCoaches.teamId))
+      .where(and(eq(teamCoaches.coachEmail, email.toLowerCase()), ilike(teams.name, "%worship%")));
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Every coach account (for the assignment picker). */
 export async function getAllCoaches(): Promise<CoachRef[]> {
   if (!process.env.DATABASE_URL) return [];
@@ -163,9 +181,12 @@ export async function listTeams(): Promise<TeamSummary[]> {
     d.select({ email: users.email, name: users.name }).from(users),
   ]);
 
-  const cutoff = new Date(Date.now() - CYCLE_DAYS * 86_400_000);
-  const conns = await d.select({ pcoId: connections.pcoId }).from(connections).where(gte(connections.contactedAt, cutoff));
-  const contactedIds = new Set(conns.map((c) => c.pcoId));
+  // "This cycle" = this calendar month (NZ). Over-fetch around the UTC month edge, then
+  // filter by NZ date so the reset lines up with the Connect page across DST.
+  const monthStart = nzToday().slice(0, 7) + "-01";
+  const fetchSince = new Date(Date.parse(monthStart + "T00:00:00Z") - 2 * 86_400_000);
+  const conns = await d.select({ pcoId: connections.pcoId, at: connections.contactedAt }).from(connections).where(gte(connections.contactedAt, fetchSince));
+  const contactedIds = new Set(conns.filter((c) => nzDateOf(c.at.toISOString()) >= monthStart).map((c) => c.pcoId));
   const nameByEmail = new Map(userRows.map((u) => [u.email, u.name]));
 
   return teamRows

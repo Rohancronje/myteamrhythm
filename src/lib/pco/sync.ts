@@ -81,7 +81,7 @@ export async function syncSongs(weeks = 4, cfg: PcoConfig = pcoConfigFromEnv()) 
     for (const plan of plans) {
       const [songs, members, times] = await Promise.all([client.planItems(pcoId, plan.id), client.planTeamMembers(pcoId, plan.id), client.planTimes(pcoId, plan.id)]);
       if (!songs.length) continue;
-      const lead = members.find((m) => /worship\s*lead|music director|^lead$/i.test(m.position));
+      const lead = members.find((m) => /worship\s*lead|^wl$/i.test(m.position)) ?? members.find((m) => /^co-?lead/i.test(m.position));
       services.push({ planId: plan.id, serviceDate: serviceDateFromTimes(times, plan.date), serviceType: key, leader: lead?.personName ?? null });
       songs.forEach((s, i) => slots.push({ planId: plan.id, songId: s.songId, title: s.title, author: s.author, keyName: s.key, bpm: s.bpm == null ? null : Math.round(s.bpm), position: i }));
     }
@@ -169,7 +169,7 @@ export async function syncOnePlan(serviceTypeId: string, planId: string, cfg: Pc
   }
   await writeRoster(people, events);
   if (songs.length) {
-    const lead = members.find((m) => /worship\s*lead|music director|^lead$/i.test(m.position));
+    const lead = members.find((m) => /worship\s*lead|^wl$/i.test(m.position)) ?? members.find((m) => /^co-?lead/i.test(m.position));
     await writeSongs(
       [{ planId, serviceDate: date, serviceType: key, leader: lead?.personName ?? null }],
       songs.map((s, i) => ({ planId, songId: s.songId, title: s.title, author: s.author, keyName: s.key, bpm: s.bpm == null ? null : Math.round(s.bpm), position: i })),

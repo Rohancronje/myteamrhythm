@@ -14,6 +14,9 @@ export function canAccess(role: Role, pathname: string): boolean {
   if (role === "coach") {
     if (pathname === "/connect" || pathname.startsWith("/connect/")) return true;
     if (pathname === "/birthdays") return true;
+    // Songs Insights is allowed at the proxy for any coach; the page itself further
+    // restricts it to coaches on a worship team.
+    if (pathname === "/songs-insights") return true;
     if (pathname.startsWith("/api/connect") || pathname.startsWith("/api/contacts")) return true;
     return false;
   }
@@ -35,20 +38,22 @@ export interface NavItem {
   icon: "home" | "teams" | "songs" | "check" | "insights" | "me" | "next" | "today" | "connect" | "birthday";
 }
 
-/** The nav items appropriate for a role. */
-export function navFor(role: Role): NavItem[] {
+/** The nav items appropriate for a role. `worshipCoach` adds the Songs tab for a
+ *  coach who's on a worship team (admins always get it). */
+export function navFor(role: Role, opts?: { worshipCoach?: boolean }): NavItem[] {
   if (role === "admin") {
     return [
       { href: "/teams", label: "Teams", icon: "teams" },
       { href: "/connect", label: "Connect", icon: "connect" },
+      { href: "/songs-insights", label: "Songs", icon: "songs" },
       { href: "/birthdays", label: "Birthdays", icon: "birthday" },
     ];
   }
   if (role === "coach") {
-    return [
-      { href: "/connect", label: "Connect", icon: "connect" },
-      { href: "/birthdays", label: "Birthdays", icon: "birthday" },
-    ];
+    const items: NavItem[] = [{ href: "/connect", label: "Connect", icon: "connect" }];
+    if (opts?.worshipCoach) items.push({ href: "/songs-insights", label: "Songs", icon: "songs" });
+    items.push({ href: "/birthdays", label: "Birthdays", icon: "birthday" });
+    return items;
   }
   return [];
 }

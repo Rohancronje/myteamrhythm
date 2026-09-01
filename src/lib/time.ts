@@ -10,6 +10,12 @@ export function nzToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: NZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
+/** First day of the current NZ calendar month, as YYYY-MM-01. The connection cycle
+ *  resets here each month — on the 1st everyone is "due" again (100% still to reach). */
+export function nzMonthStart(): string {
+  return nzToday().slice(0, 7) + "-01";
+}
+
 /** The NZ calendar date (YYYY-MM-DD) for an ISO timestamp. A Sunday-morning NZ
  *  service is still Saturday in UTC, so slicing the raw UTC timestamp lands a day
  *  early — always resolve service dates through here. Date-only strings pass through. */

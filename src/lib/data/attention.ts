@@ -4,8 +4,7 @@
 // a page (defensive → null on any error).
 
 import type { SessionUser } from "@/lib/auth/session";
-
-const CYCLE_DAYS = 28;
+import { nzToday, nzDateOf } from "@/lib/time";
 
 export interface Attention {
   count: number;
@@ -21,7 +20,10 @@ export async function getAttention(session: SessionUser): Promise<Attention | nu
     const { teamMembers, connections, teamCoaches } = await import("@/db/schema");
     const { eq, inArray, gte } = await import("drizzle-orm");
     const d = getDb();
-    const cutoff = new Date(Date.now() - CYCLE_DAYS * 86_400_000);
+    // "This cycle" = this calendar month (NZ). Over-fetch a couple of days around the
+    // UTC month edge, then filter precisely by NZ date so it's correct across DST.
+    const monthStart = nzToday().slice(0, 7) + "-01";
+    const fetchSince = new Date(Date.parse(monthStart + "T00:00:00Z") - 2 * 86_400_000);
 
     // Scope: admin → everyone; coach → members on their assigned teams only.
     let memberRows: { id: string }[];
@@ -34,8 +36,8 @@ export async function getAttention(session: SessionUser): Promise<Attention | nu
     }
     if (!memberRows.length) return { count: 0, label: "still to connect with", href: session.role === "admin" ? "/connect?view=all" : "/connect" };
 
-    const conns = await d.select({ pcoId: connections.pcoId }).from(connections).where(gte(connections.contactedAt, cutoff));
-    const contacted = new Set(conns.map((c) => c.pcoId));
+    const conns = await d.select({ pcoId: connections.pcoId, at: connections.contactedAt }).from(connections).where(gte(connections.contactedAt, fetchSince));
+    const contacted = new Set(conns.filter((c) => nzDateOf(c.at.toISOString()) >= monthStart).map((c) => c.pcoId));
     const count = memberRows.filter((m) => !contacted.has(m.id)).length;
     return { count, label: "still to connect with", href: session.role === "admin" ? "/connect?view=all" : "/connect" };
   } catch {
