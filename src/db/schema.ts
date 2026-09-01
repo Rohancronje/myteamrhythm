@@ -177,6 +177,22 @@ export const connections = pgTable(
   (t) => [index("connections_pco_idx").on(t.pcoId), index("connections_coach_idx").on(t.coachEmail)],
 );
 
+/** Owner-visible audit trail of consequential admin actions (account/role/team
+ *  changes). Append-only; never blocks the action it records. */
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    at: timestamp("at").defaultNow().notNull(),
+    actorEmail: text("actor_email"),
+    actorName: text("actor_name"),
+    action: text("action").notNull(), // e.g. "account.create", "role.change", "coach.remove"
+    target: text("target"), // who/what it affected
+    detail: text("detail"), // human-readable summary
+  },
+  (t) => [index("audit_at_idx").on(t.at)],
+);
+
 /** Upcoming (future) services for the "your next service" view. Small forward
  *  window, replaced wholesale on each sync. `data` holds times, roster, songs. */
 export const upcomingServices = pgTable("upcoming_services", {

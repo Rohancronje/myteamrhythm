@@ -62,12 +62,13 @@ function AddPerson() {
       const res = await fetch("/api/users/create", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName, lastName, phone, email, role, password, notify }) });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error ?? "failed");
+      const verb = data.existed ? "already had an account — password reset" : `added as ${ROLE_META[role]?.label ?? role}`;
       if (notify) {
         setMsg(data.emailed
-          ? `✓ ${firstName} added as ${ROLE_META[role]?.label ?? role} and emailed their login.`
-          : `✓ ${firstName} added, but the email didn't send${data.emailError ? ` (${data.emailError})` : ""}. Share the password: ${password}`);
+          ? `✓ ${firstName} ${verb}; login emailed to ${email}.`
+          : `✓ ${firstName} ${verb}, but the email didn't send${data.emailError ? ` (${data.emailError})` : ""}. Share the password: ${password}`);
       } else {
-        setMsg(`✓ ${firstName} added as ${ROLE_META[role]?.label ?? role}. Share their password: ${password}`);
+        setMsg(`✓ ${firstName} ${verb}. Share their password: ${password}`);
       }
       setFirstName(""); setLastName(""); setPhone(""); setEmail(""); setPassword(""); setRole("coach");
       router.refresh();

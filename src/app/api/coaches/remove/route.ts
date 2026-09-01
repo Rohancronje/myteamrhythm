@@ -21,6 +21,8 @@ export async function POST(req: Request) {
     const db = getDb();
     await db.delete(teamCoaches).where(eq(teamCoaches.coachEmail, email));
     await db.delete(users).where(and(eq(users.email, email), eq(users.role, "coach")));
+    const { logAudit } = await import("@/lib/data/audit");
+    await logAudit("coach.remove", { actor: { email: session.email, name: session.name }, target: email, detail: "Coach account removed" });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });

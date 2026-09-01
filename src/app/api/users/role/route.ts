@@ -32,8 +32,10 @@ export async function POST(req: Request) {
       }
     }
 
-    const rows = await d.update(users).set({ role }).where(eq(users.email, email)).returning({ email: users.email });
+    const rows = await d.update(users).set({ role }).where(eq(users.email, email)).returning({ email: users.email, name: users.name });
     if (!rows.length) return NextResponse.json({ ok: false, error: "no such user" }, { status: 404 });
+    const { logAudit } = await import("@/lib/data/audit");
+    await logAudit("role.change", { actor: { email: session.email, name: session.name }, target: email, detail: `${rows[0].name} → ${role}` });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

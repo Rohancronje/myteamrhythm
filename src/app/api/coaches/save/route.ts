@@ -34,15 +34,23 @@ export async function POST(req: Request) {
   const hash = "scrypt:" + salt + ":" + scryptSync(p.password, salt, 64).toString("hex");
 
   try {
-    // Never silently overwrite (and possibly demote) an existing account.
     const { getDb } = await import("@/db");
     const { users } = await import("@/db/schema");
     const { eq } = await import("drizzle-orm");
-    const existing = await getDb().select({ email: users.email }).from(users).where(eq(users.email, p.email.toLowerCase()));
-    if (existing.length) return NextResponse.json({ ok: false, error: "An account with that email already exists." }, { status: 409 });
+    const target = p.email.toLowerCase();
+    const existing = await getDb().select({ email: users.email }).from(users).where(eq(users.email, target));
 
-    const { writeUsers } = await import("@/db/writers");
-    await writeUsers([{ email: p.email.toLowerCase(), name, phone, role: "coach", personId: null, teams: p.teams ?? [], passwordHash: hash }]);
+    if (existing.length) {
+      // Already an account — don't duplicate or change their role. Just set the given
+      // password so "add coach & email" reliably sends them a working login instead of
+      // erroring out.
+      await getDb().update(users).set({ passwordHash: hash }).where(eq(users.email, target));
+    } else {
+      const { writeUsers } = await import("@/db/writers");
+      await writeUsers([{ email: target, name, phone, role: "coach", personId: null, teams: p.teams ?? [], passwordHash: hash }]);
+    }
+    const { logAudit } = await import("@/lib/data/audit");
+    await logAudit(existing.length ? "coach.reset" : "coach.add", { actor: { email: session.email, name: session.name }, target: p.email, detail: existing.length ? `Password reset for ${name}` : `Coach invited: ${name}` });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

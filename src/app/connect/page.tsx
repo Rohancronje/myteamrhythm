@@ -8,6 +8,7 @@ import { getSession } from "@/lib/auth/server";
 import { getUserTeams } from "@/lib/auth/users";
 import { getCoachConnect } from "@/lib/data/connect";
 import { getAllTeamIds } from "@/lib/data/teams-admin";
+import { isOwner } from "@/lib/auth/owner";
 import { nzNowAnchor } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
   if (session.role !== "coach" && session.role !== "admin") redirect("/");
 
   const isAdmin = session.role === "admin";
+  const owner = isOwner(session.email);
   const myTeams = await getUserTeams(session.email);
   const { view } = await searchParams;
   const showAll = isAdmin && (view === "all" || myTeams.length === 0);
@@ -50,6 +52,12 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
             <span className="text-sm font-medium text-text">Accounts &amp; passwords</span>
             <span className="grad-text mt-1 text-xs font-semibold">Open →</span>
           </Link>
+          {owner && (
+            <Link href="/admin/audit" className="flex flex-col justify-between rounded-2xl border border-border bg-surface-solid px-4 py-3">
+              <span className="text-sm font-medium text-text">Audit log <span className="text-[10px] font-semibold text-purple">· Owner</span></span>
+              <span className="grad-text mt-1 text-xs font-semibold">Open →</span>
+            </Link>
+          )}
         </div>
       )}
 

@@ -29,6 +29,8 @@ export async function POST(req: Request) {
 
     await db.delete(teamCoaches).where(eq(teamCoaches.coachEmail, email));
     await db.delete(users).where(eq(users.email, email));
+    const { logAudit } = await import("@/lib/data/audit");
+    await logAudit("account.remove", { actor: { email: session.email, name: session.name }, target: email, detail: `Removed account (${target?.role ?? "unknown role"})` });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });

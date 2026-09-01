@@ -34,6 +34,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }
 
+  const { logAudit } = await import("@/lib/data/audit");
+  await logAudit("account.reset", { actor: { email: session.email, name: session.name }, target: email, detail: `Password reset for ${name}` });
+
   if (notify) {
     // The password is already reset; never let an email hiccup turn this into a 500
     // (which Vercel renders as HTML — the source of the "not valid JSON" error).

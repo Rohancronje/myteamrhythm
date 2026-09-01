@@ -31,6 +31,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   try {
     await removeMember(id);
+    const { logAudit } = await import("@/lib/data/audit");
+    await logAudit("member.remove", { actor: { email: session.email, name: session.name }, target: id, detail: "Volunteer removed from a team" });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
