@@ -46,6 +46,10 @@ export default async function AuditPage() {
 }
 
 const ACTION_META: Record<string, { label: string; color: string }> = {
+  "auth.login": { label: "Signed in", color: "#5cc2ff" },
+  "auth.login_failed": { label: "Failed sign-in", color: "#ffb454" },
+  "auth.reset_requested": { label: "Reset link requested", color: "#8b6cff" },
+  "auth.reset_completed": { label: "Password reset (self-service)", color: "#5cc2ff" },
   "account.create": { label: "Account created", color: "#38dd9b" },
   "account.reset": { label: "Password reset", color: "#5cc2ff" },
   "role.change": { label: "Role changed", color: "#8b6cff" },

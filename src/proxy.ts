@@ -7,7 +7,7 @@ import { canAccess, homePathFor } from "@/lib/auth/access";
 // session except: the login page + auth API, and the volunteer pulse check-in
 // (reached by a public link, no account needed). Role gating (member/leader can't
 // reach team-wide pastoral surfaces) is enforced here too.
-const PUBLIC = ["/login", "/privacy", "/api/auth", "/pulse", "/api/pulse", "/api/webhooks", "/api/cron", "/api/ping", "/manifest.webmanifest", "/sw.js", "/offline.html", "/.well-known", "/icon.jpg", "/apple-icon.jpg", "/logo.jpg"];
+const PUBLIC = ["/login", "/reset", "/privacy", "/api/auth", "/pulse", "/api/pulse", "/api/webhooks", "/api/cron", "/api/ping", "/manifest.webmanifest", "/sw.js", "/offline.html", "/.well-known", "/icon.jpg", "/apple-icon.jpg", "/logo.jpg"];
 
 // The one canonical address. Everything else (churchteamconnect.com, www, and the
 // raw *.vercel.app deploy URLs) redirects here so there's a single URL and no

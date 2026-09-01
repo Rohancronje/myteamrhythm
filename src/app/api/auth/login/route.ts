@@ -12,12 +12,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid input" }, { status: 400 });
   }
 
+  const { logAudit } = await import("@/lib/data/audit");
   const user = await verifyCredentials(parsed.data.email, parsed.data.password);
   if (!user) {
+    await logAudit("auth.login_failed", { target: parsed.data.email.toLowerCase(), detail: "Failed sign-in attempt" });
     // Deliberately vague — don't reveal whether the email exists.
     return NextResponse.json({ ok: false, error: "Wrong email or password" }, { status: 401 });
   }
 
+  await logAudit("auth.login", { actor: { email: user.email, name: user.name }, detail: `Signed in (${user.role})` });
   const res = NextResponse.json({ ok: true, role: user.role, name: user.name });
   res.cookies.set(SESSION_COOKIE, signSession(user), cookieOptions);
   return res;

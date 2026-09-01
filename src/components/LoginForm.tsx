@@ -10,6 +10,18 @@ export function LoginForm() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [forgot, setForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+
+  async function sendReset() {
+    setForgotBusy(true);
+    try {
+      await fetch("/api/auth/forgot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: forgotEmail }) });
+    } catch { /* generic success either way */ }
+    setForgotSent(true);
+    setForgotBusy(false);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,16 +89,31 @@ export function LoginForm() {
       </button>
 
       <div className="pt-1 text-center">
-        <button type="button" onClick={() => setForgot((f) => !f)} className="text-xs text-mute underline-offset-2 hover:text-text hover:underline">
+        <button type="button" onClick={() => { setForgot((f) => !f); setForgotSent(false); setForgotEmail((v) => v || email); }} className="text-xs text-mute underline-offset-2 hover:text-text hover:underline">
           Forgot password?
         </button>
       </div>
       {forgot && (
-        <div className="rounded-xl border border-border bg-surface-solid px-4 py-3 text-xs leading-relaxed text-mute">
-          Rhythm is invite-only, so passwords are reset by an admin. Ask whoever set up your
-          account (your church admin) to reset it for you — they can do it in seconds from the
-          Accounts screen, and hand you a new one.
-        </div>
+        forgotSent ? (
+          <div className="rounded-xl border border-border bg-surface-solid px-4 py-3 text-xs leading-relaxed text-mute">
+            If <span className="text-text">{forgotEmail || "that email"}</span> has an account, a reset link is on its way. Check your inbox (and spam) — it expires in 1 hour.
+          </div>
+        ) : (
+          <div className="space-y-2 rounded-xl border border-border bg-surface-solid px-4 py-3">
+            <p className="text-xs text-mute">Enter your email and we&apos;ll send you a reset link.</p>
+            <input
+              type="email"
+              autoComplete="email"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              placeholder="you@church.com"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-faint focus:border-purple focus:outline-none"
+            />
+            <button type="button" onClick={sendReset} disabled={forgotBusy || !forgotEmail} className="w-full rounded-full border border-border py-2 text-xs font-semibold text-text disabled:opacity-40">
+              {forgotBusy ? "Sending…" : "Send reset link"}
+            </button>
+          </div>
+        )
       )}
     </form>
   );
