@@ -7,7 +7,10 @@ import { getSession } from "@/lib/auth/server";
 import { getUserTeams } from "@/lib/auth/users";
 import { getAllTeamIds } from "@/lib/data/teams-admin";
 import { getCoachConnect } from "@/lib/data/connect";
+import { getUpcomingEvents } from "@/lib/data/events";
+import { getPerms } from "@/lib/auth/permissions";
 import { isOwner } from "@/lib/auth/owner";
+import { UpcomingEvents } from "@/components/UpcomingEvents";
 import { nzNowAnchor } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +25,7 @@ export default async function HomePage() {
   const first = session.name.split(/\s+/)[0] || session.name;
   const isAdmin = session.role === "admin";
   const owner = isOwner(session.email);
+  const [events, perms] = await Promise.all([getUpcomingEvents(), getPerms(session.email, session.role)]);
 
   let stats: { total: number; contactedPct: number; birthdays: number; stillToReach: number } | null = null;
   if (isAdmin || session.role === "coach") {
@@ -51,11 +55,8 @@ export default async function HomePage() {
         </p>
       </section>
 
-      {/* What's coming up (events land here in the next update) */}
-      <section className="rise mt-7" style={{ animationDelay: "30ms" }}>
-        <h2 className="mb-3 text-sm font-medium text-mute">What&apos;s coming up</h2>
-        <div className="glass rounded-[var(--radius-card)] p-5 text-sm text-mute">Nothing scheduled yet — upcoming events will show here soon.</div>
-      </section>
+      {/* What's coming up */}
+      <UpcomingEvents events={events} canPost={perms.canPostEvents} />
 
       {/* Team snapshot + link to Connect */}
       {stats && (

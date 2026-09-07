@@ -11,6 +11,8 @@ interface Account {
   name: string;
   role: string;
   teams: string[];
+  canPostEvents: boolean;
+  canPostResources: boolean;
 }
 
 const ROLE_META: Record<string, { label: string; color: string }> = {
@@ -127,7 +129,16 @@ function AccountRow({ u }: { u: Account }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [canEvents, setCanEvents] = useState(u.canPostEvents);
+  const [canResources, setCanResources] = useState(u.canPostResources);
   const meta = ROLE_META[u.role] ?? { label: u.role, color: "var(--color-mute)" };
+
+  async function togglePerm(which: "events" | "resources", val: boolean) {
+    if (which === "events") setCanEvents(val); else setCanResources(val);
+    try {
+      await fetch("/api/users/permissions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: u.email, [which === "events" ? "canPostEvents" : "canPostResources"]: val }) });
+    } catch { /* revert on failure */ if (which === "events") setCanEvents(!val); else setCanResources(!val); }
+  }
 
   async function reset(notify: boolean) {
     if (password.length < 8) { setMsg("Use at least 8 characters."); return; }
@@ -228,6 +239,20 @@ function AccountRow({ u }: { u: Account }) {
                 );
               })}
             </div>
+          </div>
+
+          {/* Posting permissions */}
+          <div className="mt-3 border-t border-border pt-3">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-faint">Can post</p>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => togglePerm("events", !canEvents)} className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors" style={canEvents ? { background: "#5cc2ff", borderColor: "transparent", color: "#04121f" } : { borderColor: "var(--color-border)", color: "var(--color-mute)" }}>
+                {canEvents ? "✓ " : ""}Events
+              </button>
+              <button onClick={() => togglePerm("resources", !canResources)} className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors" style={canResources ? { background: "#5cc2ff", borderColor: "transparent", color: "#04121f" } : { borderColor: "var(--color-border)", color: "var(--color-mute)" }}>
+                {canResources ? "✓ " : ""}Resources
+              </button>
+            </div>
+            {u.role === "admin" && <p className="mt-1.5 text-[10px] text-faint">Admins can always post regardless of these.</p>}
           </div>
         </div>
       )}

@@ -99,9 +99,30 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("member"),
   personId: text("person_id"),
   teams: jsonb("teams").$type<string[]>().default([]),
+  // Fine-grained posting permissions (admins/owner can always post regardless).
+  canPostEvents: boolean("can_post_events").notNull().default(false),
+  canPostResources: boolean("can_post_resources").notNull().default(false),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+/** Upcoming events shown on the Home dashboard's "What's coming up". Posted by
+ *  admins/owner or accounts granted canPostEvents. */
+export const events = pgTable(
+  "events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    detail: text("detail"),
+    location: text("location"),
+    eventDate: date("event_date").notNull(), // YYYY-MM-DD (NZ) — TZ-safe like birthdays
+    eventTime: text("event_time"), // free text, e.g. "6:30pm"
+    createdBy: text("created_by"),
+    createdByName: text("created_by_name"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("events_date_idx").on(t.eventDate)],
+);
 
 // ── Volunteer connection platform ────────────────────────────────────────────
 // Admin-created teams + manually-added/imported volunteers. This is the primary
