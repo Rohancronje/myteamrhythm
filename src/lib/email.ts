@@ -126,6 +126,42 @@ ${signInBlock(opts.email, opts.password)}
   return { subject, html };
 }
 
+/** Sent to the team when a new resource is added. */
+export function newResourceEmail(opts: { recipientName: string; title: string; addedByName: string; kind: string }): { subject: string; html: string } {
+  const first = opts.recipientName.split(/\s+/)[0] || opts.recipientName;
+  const url = appUrl();
+  const logo = `${url}/logo.jpg`;
+  const link = `${url}/resources`;
+  const kindLabel = opts.kind === "pdf" ? "a PDF" : "a link";
+  const subject = `New resource: ${opts.title}`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"></head>
+<body style="margin:0;padding:0;background:#ecebf2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171426;-webkit-font-smoothing:antialiased;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${opts.addedByName} added a new resource: ${opts.title}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ecebf2;padding:32px 12px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 20px 48px rgba(23,16,44,.14);border:1px solid #e6e4ef;">
+<tr><td style="background:#0a0912;padding:34px 32px 30px;text-align:center;">
+<img src="${logo}" width="220" alt="Rhythm" style="display:inline-block;width:220px;max-width:70%;height:auto;border:0;outline:none;text-decoration:none;">
+</td></tr>
+<tr><td style="height:5px;background:linear-gradient(90deg,#8b6cff,#c06cff,#ff5c8a);font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="padding:34px 38px 6px;">
+<p style="font-size:17px;font-weight:600;margin:0 0 16px;color:#171426;">Hi ${first},</p>
+<p style="font-size:15px;line-height:1.65;margin:0 0 22px;color:#2c2740;"><strong style="color:#171426;">${opts.addedByName}</strong> just added ${kindLabel} to Resources:</p>
+<div style="border:1px solid #eae7f4;background:#f7f6fc;border-radius:16px;padding:16px 20px;margin:0 0 24px;">
+<p style="font-size:16px;font-weight:700;margin:0;color:#171426;">${opts.title}</p>
+</div>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 26px;"><tr><td align="center" style="border-radius:999px;background:linear-gradient(135deg,#8b6cff,#ff5c8a);box-shadow:0 10px 24px rgba(139,108,255,.4);">
+<a href="${link}" style="display:inline-block;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 40px;border-radius:999px;">Open Resources &nbsp;&rarr;</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:22px 38px 30px;border-top:1px solid #f0eef6;">
+<div style="font-size:11px;line-height:1.6;color:#aba6bb;text-align:center;">Rhythm &mdash; a volunteer connection platform for churches.</div>
+</td></tr>
+</table>
+<div style="max-width:560px;font-size:11px;color:#b4b0c2;padding:16px 8px 0;text-align:center;">Sent by Rhythm &middot; myteamrhythm.online</div>
+</td></tr></table></body></html>`;
+  return { subject, html };
+}
+
 /** Self-service "forgot password" — a one-time reset link (no password inside). */
 export function passwordResetLinkEmail(opts: { name: string; token: string }): { subject: string; html: string } {
   const first = opts.name.split(/\s+/)[0] || opts.name;

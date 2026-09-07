@@ -62,6 +62,8 @@ const ACTION_META: Record<string, { label: string; color: string }> = {
   "event.create": { label: "Event posted", color: "#38dd9b" },
   "event.remove": { label: "Event removed", color: "#ff5c6a" },
   "permissions.change": { label: "Permissions changed", color: "#8b6cff" },
+  "resource.add": { label: "Resource added", color: "#38dd9b" },
+  "resource.remove": { label: "Resource removed", color: "#ff5c6a" },
   "member.remove": { label: "Volunteer removed", color: "#ff5c6a" },
 };
 

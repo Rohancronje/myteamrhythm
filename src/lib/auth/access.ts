@@ -54,24 +54,21 @@ export interface NavItem {
  *  coach who's on a worship team (admins always get it). */
 export function navFor(role: Role, opts?: { worshipCoach?: boolean }): NavItem[] {
   const home: NavItem = { href: "/home", label: "Home", icon: "home" };
+  const connect: NavItem = { href: "/connect", label: "Connect", icon: "connect" };
+  const resources: NavItem = { href: "/resources", label: "Resources", icon: "resources" };
   const birthdays: NavItem = { href: "/birthdays", label: "Birthdays", icon: "birthday" };
   if (role === "admin") {
-    return [
-      home,
-      { href: "/teams", label: "Teams", icon: "teams" },
-      { href: "/connect", label: "Connect", icon: "connect" },
-      { href: "/songs-insights", label: "Songs", icon: "songs" },
-      birthdays,
-    ];
+    // Teams + Songs live under Home → Manage so the bottom bar stays uncluttered.
+    return [home, connect, resources, birthdays];
   }
   if (role === "coach") {
-    const items: NavItem[] = [home, { href: "/connect", label: "Connect", icon: "connect" }];
+    const items: NavItem[] = [home, connect];
     if (opts?.worshipCoach) items.push({ href: "/songs-insights", label: "Songs", icon: "songs" });
-    items.push(birthdays);
+    items.push(resources, birthdays);
     return items;
   }
   if (role === "leader") {
-    return [home, birthdays];
+    return [home, resources, birthdays];
   }
   return [];
 }

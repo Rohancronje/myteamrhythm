@@ -80,6 +80,7 @@ export default async function HomePage() {
           <h2 className="mb-3 text-sm font-medium text-mute">Manage</h2>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <QuickLink href="/teams" label="Teams" />
+            <QuickLink href="/songs-insights" label="Songs" />
             <QuickLink href="/admin/coaches" label="Coaches" />
             <QuickLink href="/admin/users" label="Accounts" />
             {owner && <QuickLink href="/admin/audit" label="Audit log" />}

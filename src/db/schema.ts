@@ -199,6 +199,38 @@ export const connections = pgTable(
   (t) => [index("connections_pco_idx").on(t.pcoId), index("connections_coach_idx").on(t.coachEmail)],
 );
 
+/** Shared team resources — links or uploaded PDFs — that coaches/leaders can read
+ *  and comment on. Posted by admins/owner or accounts granted canPostResources. */
+export const resources = pgTable(
+  "resources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    detail: text("detail"),
+    kind: text("kind").notNull(), // 'link' | 'pdf'
+    url: text("url").notNull(), // external link, or the uploaded blob URL
+    fileName: text("file_name"), // original filename for uploaded PDFs
+    addedBy: text("added_by"),
+    addedByName: text("added_by_name"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("resources_created_idx").on(t.createdAt)],
+);
+
+/** A comment on a resource. */
+export const resourceComments = pgTable(
+  "resource_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    resourceId: uuid("resource_id").notNull().references(() => resources.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    authorEmail: text("author_email"),
+    authorName: text("author_name"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("rescomment_res_idx").on(t.resourceId)],
+);
+
 /** Owner-visible audit trail of consequential admin actions (account/role/team
  *  changes). Append-only; never blocks the action it records. */
 export const auditLog = pgTable(
