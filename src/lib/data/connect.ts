@@ -94,6 +94,36 @@ async function loadConnections(memberIds: string[]): Promise<Map<string, ConnRow
   return byPerson;
 }
 
+/** Lightweight Home-dashboard summary — just the four numbers, without building the
+ *  whole connect plan (no serving index / upcoming / verses). Much cheaper than
+ *  getCoachConnect for a page that only shows tiles. */
+export async function getHomeStats(teamIds: string[] | undefined, now: Date): Promise<{ total: number; contactedPct: number; birthdays: number; stillToReach: number }> {
+  const ids = [...new Set((teamIds ?? []).filter(Boolean))];
+  const empty = { total: 0, contactedPct: 0, birthdays: 0, stillToReach: 0 };
+  if (!process.env.DATABASE_URL || ids.length === 0) return empty;
+  try {
+    const { getDb } = await import("@/db");
+    const { teamMembers, connections } = await import("@/db/schema");
+    const { inArray, and, eq } = await import("drizzle-orm");
+    const { nzMonthStart, nzDateOf } = await import("@/lib/time");
+    const d = getDb();
+
+    const members = await d.select({ id: teamMembers.id, birthday: teamMembers.birthday }).from(teamMembers).where(and(inArray(teamMembers.teamId, ids), eq(teamMembers.active, true)));
+    const total = members.length;
+    if (!total) return empty;
+
+    const monthStart = nzMonthStart();
+    const conns = await d.select({ pcoId: connections.pcoId, at: connections.contactedAt }).from(connections).where(inArray(connections.pcoId, members.map((m) => m.id)));
+    const contactedThisMonth = new Set(conns.filter((c) => nzDateOf(c.at.toISOString()) >= monthStart).map((c) => c.pcoId));
+    const contacted = members.filter((m) => contactedThisMonth.has(m.id)).length;
+    const birthdays = members.filter((m) => { const du = daysUntilBirthday(m.birthday, now); return du !== null && du <= 7; }).length;
+
+    return { total, contactedPct: total ? Math.round((contacted / total) * 100) : 0, birthdays, stillToReach: total - contacted };
+  } catch {
+    return empty;
+  }
+}
+
 /** Resolve coach emails → display names (for "reached by …" attribution). Falls
  *  back to the email's local part when a coach account can't be found. */
 async function loadCoachNames(emails: string[]): Promise<Map<string, string>> {

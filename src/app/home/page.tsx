@@ -6,7 +6,7 @@ import { AccountChip } from "@/components/AccountChip";
 import { getSession } from "@/lib/auth/server";
 import { getUserTeams } from "@/lib/auth/users";
 import { getAllTeamIds } from "@/lib/data/teams-admin";
-import { getCoachConnect } from "@/lib/data/connect";
+import { getHomeStats } from "@/lib/data/connect";
 import { getUpcomingEvents } from "@/lib/data/events";
 import { getPerms } from "@/lib/auth/permissions";
 import { isOwner } from "@/lib/auth/owner";
@@ -30,13 +30,7 @@ export default async function HomePage() {
   let stats: { total: number; contactedPct: number; birthdays: number; stillToReach: number } | null = null;
   if (isAdmin || session.role === "coach") {
     const teamIds = isAdmin ? await getAllTeamIds() : await getUserTeams(session.email);
-    const data = await getCoachConnect(teamIds, nzNowAnchor(), session.email);
-    stats = {
-      total: data.total,
-      contactedPct: data.contactedPct,
-      birthdays: data.birthdaysSoon.length,
-      stillToReach: data.people.filter((p) => p.due).length,
-    };
+    stats = await getHomeStats(teamIds, nzNowAnchor());
   }
 
   return (
