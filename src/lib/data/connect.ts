@@ -9,7 +9,7 @@
 // capped to an even daily pace so the coach isn't handed the whole team at once.
 
 import { daysUntilBirthday } from "./contacts";
-import { getServingIndex, type ServeRef, type ServeLoad } from "./serving";
+import { type ServeRef, type ServeLoad } from "./serving";
 import { VERSES, weekIndex, type Verse } from "./verses";
 
 const WORKING_DAYS = 20; // ~a month of weekdays — spreads the roster into a daily pace
@@ -166,9 +166,8 @@ export async function getCoachConnect(teamIds: string[] | undefined, now: Date, 
   // Names of every coach who has logged a contact on this roster — for "reached by …".
   const coachNames = await loadCoachNames([...new Set([...conns.values()].flat().map((c) => c.coachEmail))]);
   const nameOf = (email: string) => coachNames.get(email) ?? email.split("@")[0];
-  // Planning Center serving links (last serve / next serving), matched by name.
   const { nzToday, nzDateOf } = await import("@/lib/time");
-  const [serving, todayISO] = [await getServingIndex(), nzToday()];
+  const todayISO = nzToday();
   // The cycle is a calendar month — it resets on the 1st (NZ), so a contact "counts"
   // only if it happened on or after the first of the current month.
   const monthStart = todayISO.slice(0, 7) + "-01"; // e.g. "2026-09-01"
@@ -220,10 +219,7 @@ export async function getCoachConnect(teamIds: string[] | undefined, now: Date, 
       // A note is private to its author — surface it only to the viewer who wrote it.
       lastNote: viewerEmail ? history.find((h) => h.note && h.coachEmail === viewerEmail)?.note ?? null : null,
       verse: verseOf.get(m.id) ?? null,
-      serving: (() => {
-        const pcoId = serving.pcoIdFor(m.name);
-        return pcoId ? { last: serving.lastServe(pcoId, todayISO), next: serving.nextServe(pcoId), load: serving.load6w(pcoId, todayISO) } : null;
-      })(),
+      serving: null, // loaded on demand when a card is opened (see /api/connect/serving)
     };
   });
 

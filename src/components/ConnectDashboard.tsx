@@ -247,6 +247,25 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
   const [phone, setPhone] = useState(p.phone ?? "");
   const [birthday, setBirthday] = useState(p.birthday ?? "");
   const [includeVerse, setIncludeVerse] = useState(true);
+  // Serving info (last/next serve + load) is heavy to compute for the whole roster,
+  // and only shows in the expanded card — so fetch it on demand the first time a card
+  // is opened rather than for everyone on every Connect page load.
+  const [serving, setServing] = useState<{ last: ServeRef | null; next: ServeRef | null; load: ServeLoad | null } | null>(p.serving);
+  const [servingState, setServingState] = useState<"idle" | "loading" | "done">(p.serving ? "done" : "idle");
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && servingState === "idle") {
+      setServingState("loading");
+      try {
+        const res = await fetch("/api/connect/serving", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: p.name }) });
+        const data = await res.json();
+        setServing(data.serving ?? null);
+      } catch { /* leave serving null */ }
+      setServingState("done");
+    }
+  }
 
   const firstName = p.name.split(" ")[0];
   const waMessage = includeVerse && p.verse
@@ -276,7 +295,7 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
 
   return (
     <div className="glass overflow-hidden rounded-2xl" style={highlight ? { border: "1px solid rgba(139,108,255,0.28)" } : undefined}>
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 p-4 text-left">
+      <button onClick={toggle} className="flex w-full items-center gap-3 p-4 text-left">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-[2px]" style={{ background: "var(--color-surface-2)" }}>
           <span className="flex h-full w-full items-center justify-center rounded-full bg-surface-solid font-display text-xs font-bold text-text">{p.initials}</span>
         </span>
@@ -316,14 +335,20 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
             </div>
           )}
 
-          {/* Planning Center serving context */}
-          {p.serving && (p.serving.last || p.serving.next) && (
-            <div className="mb-3 grid grid-cols-2 gap-2">
-              <ServeStat kind="Last serve" serve={p.serving.last} empty="No record" />
-              <ServeStat kind="Next serving" serve={p.serving.next} empty="Not rostered" />
+          {/* Planning Center serving context (fetched on open) */}
+          {servingState === "loading" && (
+            <div className="mb-3 flex items-center gap-2 text-xs text-faint">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-border" style={{ borderTopColor: "var(--color-purple)" }} />
+              Loading serving info…
             </div>
           )}
-          {p.serving?.load && <LoadMeter load={p.serving.load} />}
+          {serving && (serving.last || serving.next) && (
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <ServeStat kind="Last serve" serve={serving.last} empty="No record" />
+              <ServeStat kind="Next serving" serve={serving.next} empty="Not rostered" />
+            </div>
+          )}
+          {serving?.load && <LoadMeter load={serving.load} />}
 
           {/* Quick contact actions */}
           <div className="flex flex-wrap gap-2">
