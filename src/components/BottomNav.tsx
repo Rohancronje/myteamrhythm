@@ -97,7 +97,7 @@ export function BottomNav({ items, user, attention }: { items: NavItem[]; user?:
 
 function Icon({ name, active }: { name: NavItem["icon"]; active: boolean }) {
   const stroke = active
-    ? { home: "url(#g1)", teams: "#ff5c8a", songs: "#8b6cff", check: "#38dd9b", insights: "#5cc2ff", me: "url(#g1)", next: "#ffb454", today: "#38dd9b", connect: "url(#g1)", birthday: "#ff5c8a" }[name]
+    ? { home: "url(#g1)", teams: "#ff5c8a", songs: "#8b6cff", check: "#38dd9b", insights: "#5cc2ff", me: "url(#g1)", next: "#ffb454", today: "#38dd9b", connect: "url(#g1)", birthday: "#ff5c8a", resources: "#5cc2ff" }[name]
     : "currentColor";
   const common = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none" as const };
   switch (name) {
@@ -165,6 +165,12 @@ function Icon({ name, active }: { name: NavItem["icon"]; active: boolean }) {
         <svg {...common} stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 20h16M5 20v-6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6M4 16c1.2 0 1.2 1 2.4 1s1.2-1 2.4-1 1.2 1 2.4 1 1.2-1 2.4-1 1.2 1 2.4 1 1.2-1 2.4-1" />
           <path d="M12 8V5M12 5c.7 0 1.2-.5 1.2-1.2C13.2 3 12 1.8 12 1.8S10.8 3 10.8 3.8C10.8 4.5 11.3 5 12 5z" />
+        </svg>
+      );
+    case "resources":
+      return (
+        <svg {...common} stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M13 3.5V8h4.5M9 13h6M9 17h4" />
         </svg>
       );
   }

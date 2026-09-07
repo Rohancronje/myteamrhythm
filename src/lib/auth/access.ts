@@ -10,6 +10,12 @@ import type { Role } from "./session";
 export function canAccess(role: Role, pathname: string): boolean {
   if (role === "admin") return true;
 
+  // The Home dashboard + Resources are open to everyone who can sign in.
+  if (pathname === "/home") return role === "coach" || role === "leader";
+  if (pathname === "/resources" || pathname.startsWith("/resources/") || pathname.startsWith("/api/resources")) {
+    return role === "coach" || role === "leader";
+  }
+
   // Coaches: the connect tool (their own teams) + birthdays + logging contacts.
   if (role === "coach") {
     if (pathname === "/connect" || pathname.startsWith("/connect/")) return true;
@@ -21,39 +27,51 @@ export function canAccess(role: Role, pathname: string): boolean {
     return false;
   }
 
-  // leader / member have no surfaces in the connection platform.
+  // Leaders: the shared surfaces (Home, Resources, Birthdays) — not the coaching roster.
+  if (role === "leader") {
+    if (pathname === "/birthdays") return true;
+    return false;
+  }
+
+  // member has no surfaces in the connection platform.
   return false;
 }
 
-/** The landing page a role can actually access (avoids redirect loops). */
+/** The landing page a role can actually access (avoids redirect loops). Everyone
+ *  who can sign in lands on the Home dashboard. */
 export function homePathFor(role: Role): string {
-  if (role === "admin") return "/teams";
-  if (role === "coach") return "/connect";
+  if (role === "admin" || role === "coach" || role === "leader") return "/home";
   return "/login";
 }
 
 export interface NavItem {
   href: string;
   label: string;
-  icon: "home" | "teams" | "songs" | "check" | "insights" | "me" | "next" | "today" | "connect" | "birthday";
+  icon: "home" | "teams" | "songs" | "check" | "insights" | "me" | "next" | "today" | "connect" | "birthday" | "resources";
 }
 
 /** The nav items appropriate for a role. `worshipCoach` adds the Songs tab for a
  *  coach who's on a worship team (admins always get it). */
 export function navFor(role: Role, opts?: { worshipCoach?: boolean }): NavItem[] {
+  const home: NavItem = { href: "/home", label: "Home", icon: "home" };
+  const birthdays: NavItem = { href: "/birthdays", label: "Birthdays", icon: "birthday" };
   if (role === "admin") {
     return [
+      home,
       { href: "/teams", label: "Teams", icon: "teams" },
       { href: "/connect", label: "Connect", icon: "connect" },
       { href: "/songs-insights", label: "Songs", icon: "songs" },
-      { href: "/birthdays", label: "Birthdays", icon: "birthday" },
+      birthdays,
     ];
   }
   if (role === "coach") {
-    const items: NavItem[] = [{ href: "/connect", label: "Connect", icon: "connect" }];
+    const items: NavItem[] = [home, { href: "/connect", label: "Connect", icon: "connect" }];
     if (opts?.worshipCoach) items.push({ href: "/songs-insights", label: "Songs", icon: "songs" });
-    items.push({ href: "/birthdays", label: "Birthdays", icon: "birthday" });
+    items.push(birthdays);
     return items;
+  }
+  if (role === "leader") {
+    return [home, birthdays];
   }
   return [];
 }
