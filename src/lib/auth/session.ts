@@ -5,7 +5,7 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export type Role = "admin" | "coach" | "leader" | "member";
+export type Role = "admin" | "coach" | "leader" | "pastor" | "member";
 
 export interface SessionUser {
   email: string;

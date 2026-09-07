@@ -11,12 +11,12 @@ const Input = z.object({
   name: z.string().max(160).optional(),
   email: z.string().email().max(200),
   phone: z.string().max(60).optional().nullable(),
-  role: z.enum(["admin", "coach", "leader", "member"]),
+  role: z.enum(["admin", "coach", "leader", "pastor", "member"]),
   password: z.string().min(8).max(200),
   notify: z.boolean().optional(),
 });
 
-const ROLE_LABEL: Record<string, string> = { admin: "Admin", coach: "Coach", leader: "Leader", member: "Member" };
+const ROLE_LABEL: Record<string, string> = { admin: "Admin", coach: "Coach", leader: "Leader", pastor: "Pastor", member: "Member" };
 
 export async function POST(req: Request) {
   const session = await getSession();

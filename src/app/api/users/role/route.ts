@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth/server";
 // coach). Guarded so the last admin can't be demoted into a lockout.
 const Input = z.object({
   email: z.string().email().max(200),
-  role: z.enum(["admin", "coach", "leader", "member"]),
+  role: z.enum(["admin", "coach", "leader", "pastor", "member"]),
 });
 
 export async function POST(req: Request) {

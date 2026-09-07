@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!["admin", "coach", "leader"].includes(session.role)) redirect("/login");
+  if (!["admin", "coach", "leader", "pastor"].includes(session.role)) redirect("/login");
 
   const first = session.name.split(/\s+/)[0] || session.name;
   const isAdmin = session.role === "admin";

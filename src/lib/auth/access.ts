@@ -11,10 +11,12 @@ export function canAccess(role: Role, pathname: string): boolean {
   if (role === "admin") return true;
 
   // The Home dashboard + Resources are open to everyone who can sign in.
-  if (pathname === "/home") return role === "coach" || role === "leader";
+  const shared = role === "coach" || role === "leader" || role === "pastor";
+  if (pathname === "/home") return shared;
   if (pathname === "/resources" || pathname.startsWith("/resources/") || pathname.startsWith("/api/resources")) {
-    return role === "coach" || role === "leader";
+    return shared;
   }
+  if (pathname.startsWith("/api/events")) return shared; // permission is re-checked in the route
 
   // Coaches: the connect tool (their own teams) + birthdays + logging contacts.
   if (role === "coach") {
@@ -27,8 +29,9 @@ export function canAccess(role: Role, pathname: string): boolean {
     return false;
   }
 
-  // Leaders: the shared surfaces (Home, Resources, Birthdays) — not the coaching roster.
-  if (role === "leader") {
+  // Leaders & pastors: the shared surfaces (Home, Resources, Birthdays) — not the
+  // coaching roster.
+  if (role === "leader" || role === "pastor") {
     if (pathname === "/birthdays") return true;
     return false;
   }
@@ -40,7 +43,7 @@ export function canAccess(role: Role, pathname: string): boolean {
 /** The landing page a role can actually access (avoids redirect loops). Everyone
  *  who can sign in lands on the Home dashboard. */
 export function homePathFor(role: Role): string {
-  if (role === "admin" || role === "coach" || role === "leader") return "/home";
+  if (role === "admin" || role === "coach" || role === "leader" || role === "pastor") return "/home";
   return "/login";
 }
 
@@ -67,7 +70,7 @@ export function navFor(role: Role, opts?: { worshipCoach?: boolean }): NavItem[]
     items.push(resources, birthdays);
     return items;
   }
-  if (role === "leader") {
+  if (role === "leader" || role === "pastor") {
     return [home, resources, birthdays];
   }
   return [];

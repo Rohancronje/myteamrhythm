@@ -9,7 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { NavItem } from "@/lib/auth/access";
 import type { Attention } from "@/lib/data/attention";
 
-const ROLE_LABEL: Record<string, string> = { admin: "Admin", coach: "Coach", leader: "Worship leader", member: "Member" };
+const ROLE_LABEL: Record<string, string> = { admin: "Admin", coach: "Coach", leader: "Leader", pastor: "Pastor", member: "Member" };
 
 export function BottomNav({ items, user, attention }: { items: NavItem[]; user?: { name: string; role: string }; attention?: Attention | null }) {
   const path = usePathname();

@@ -19,6 +19,7 @@ const ROLE_META: Record<string, { label: string; color: string }> = {
   admin: { label: "Admin", color: "#ff5c8a" },
   coach: { label: "Coach", color: "#8b6cff" },
   leader: { label: "Leader", color: "#5cc2ff" },
+  pastor: { label: "Pastor", color: "#ffb454" },
   member: { label: "Member", color: "#38dd9b" },
 };
 

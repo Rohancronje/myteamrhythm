@@ -11,14 +11,17 @@
 
 @theme {
   --color-bg: #08070f;
-  --color-surface: rgba(255, 255, 255, 0.045);
+  /* Form-field fill. Was a near-transparent white (rgba .045) which let the animated
+     aurora bleed through inputs and washed out their text — now a near-opaque dark so
+     fields read cleanly on every screen. */
+  --color-surface: #1c1b29;
   --color-surface-solid: #14131e;
-  --color-surface-2: #1c1a28;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-surface-2: #23212f;
+  --color-border: rgba(255, 255, 255, 0.14);
+  --color-border-strong: rgba(255, 255, 255, 0.22);
   --color-text: #f7f6fc;
-  --color-mute: #a5a2ba;
-  --color-faint: #8b88a6; /* lifted from #6c6987 (3.83:1) to pass AA (5.9:1) */
+  --color-mute: #b4b1c6; /* lifted for stronger contrast on dark */
+  --color-faint: #9794b0; /* lifted for clearer hints/placeholders */
 
   --color-purple: #8b6cff;
   --color-pink: #ff5c8a;

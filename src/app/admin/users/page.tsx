@@ -13,7 +13,7 @@ async function loadUsers() {
   const { getDb } = await import("@/db");
   const { users } = await import("@/db/schema");
   const rows = await getDb().select().from(users);
-  const order: Record<string, number> = { admin: 0, coach: 1, leader: 2, member: 3 };
+  const order: Record<string, number> = { admin: 0, pastor: 1, coach: 2, leader: 3, member: 4 };
   return rows
     .map((u) => ({ email: u.email, name: u.name, role: u.role, teams: u.teams ?? [], canPostEvents: !!u.canPostEvents, canPostResources: !!u.canPostResources }))
     .sort((a, b) => (order[a.role] ?? 9) - (order[b.role] ?? 9) || a.name.localeCompare(b.name));
