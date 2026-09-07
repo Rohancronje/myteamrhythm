@@ -14,10 +14,39 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
   // Only the active "to connect today" cards are lifted out of the full roster.
   // Everyone else — including people already reached today or earlier this month —
   // stays in the list below so they remain tappable to open their card.
+  const [query, setQuery] = useState("");
   const todayIds = new Set(data.today.map((p) => p.id));
   const rest = data.people.filter((p) => !todayIds.has(p.id));
+  const q = query.trim().toLowerCase();
+  const results = q ? data.people.filter((p) => p.name.toLowerCase().includes(q)) : [];
   return (
     <div className="space-y-7">
+      {/* Search the roster */}
+      <div className="rise">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search your team by name…"
+          className="w-full rounded-full border border-border bg-surface-solid px-4 py-2.5 text-sm text-text placeholder:text-faint focus:border-purple focus:outline-none"
+        />
+      </div>
+
+      {q ? (
+        <section className="rise">
+          <div className="mb-3.5 flex items-baseline justify-between">
+            <h2 className="text-sm font-medium text-mute">{results.length} {results.length === 1 ? "match" : "matches"}</h2>
+            <button onClick={() => setQuery("")} className="text-xs text-faint transition-colors hover:text-text">Clear</button>
+          </div>
+          {results.length === 0 ? (
+            <div className="glass rounded-[var(--radius-card)] p-6 text-center text-sm text-mute">No one on your team matches &ldquo;{query.trim()}&rdquo;.</div>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+              {results.map((p) => <ConnectCard key={p.id} p={p} />)}
+            </div>
+          )}
+        </section>
+      ) : (
+      <>
       {/* Cycle progress */}
       <section className="rise glass-edge relative overflow-hidden rounded-[var(--radius-card)] p-6">
         <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-purple/25 blur-3xl" />
@@ -115,6 +144,8 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
             {rest.map((p) => <ConnectCard key={p.id} p={p} />)}
           </div>
         </section>
+      )}
+      </>
       )}
     </div>
   );
