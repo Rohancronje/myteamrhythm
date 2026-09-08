@@ -112,6 +112,19 @@ export class PcoClient {
     return data.map((d) => ({ id: d.id, name: d.attributes.name as string }));
   }
 
+  /** A person's primary email + phone from the People API (same token). THROWS if the
+   *  token lacks People access (403) so callers can stop early; returns nulls only when
+   *  the person genuinely has none on file. */
+  async personContact(personId: string): Promise<{ email: string | null; phone: string | null }> {
+    const page = await this.get(`https://api.planningcenteronline.com/people/v2/people/${personId}?include=emails,phone_numbers`);
+    const inc = page.included ?? [];
+    const emails = inc.filter((r) => r.type === "Email");
+    const phones = inc.filter((r) => r.type === "PhoneNumber");
+    const email = ((emails.find((e) => e.attributes.primary) ?? emails[0])?.attributes.address as string | undefined) ?? null;
+    const phone = ((phones.find((p) => p.attributes.primary) ?? phones[0])?.attributes.number as string | undefined) ?? null;
+    return { email, phone };
+  }
+
   /**
    * Lists past plans for a service type back to `sinceISO`. Plans come newest
    * first; we stop paging once we pass the cutoff. `filter=past` keeps us to

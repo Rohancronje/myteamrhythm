@@ -3,6 +3,8 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth/server";
 import { syncTeamWithPco } from "@/lib/data/teams-admin";
 
+export const maxDuration = 60; // contact lookups add a few PCO calls per new/updated member
+
 // Reconcile a team's volunteers with its linked Planning Center team. An optional
 // pcoTeam (re)links the team first, so "link & sync" is one call.
 const Input = z.object({ pcoTeams: z.array(z.string().max(160)).max(50).optional() });

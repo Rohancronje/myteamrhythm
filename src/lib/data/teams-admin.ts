@@ -234,21 +234,53 @@ export async function syncTeamWithPco(teamId: string, pcoTeams?: string[]): Prom
   if (!linked.length) return { ok: false, error: "Link at least one Planning Center team first." };
 
   const [pcoPeople, current] = await Promise.all([
-    d.select({ name: people.name }).from(people).where(inArray(people.team, linked)),
+    d.select({ pcoId: people.pcoId, name: people.name }).from(people).where(inArray(people.team, linked)),
     d.select().from(teamMembers).where(eq(teamMembers.teamId, teamId)),
   ]);
 
-  const pcoByKey = new Map<string, string>();
-  for (const p of pcoPeople) { const k = normName(p.name); if (k) pcoByKey.set(k, p.name); }
+  const pcoByKey = new Map<string, { pcoId: string; name: string }>();
+  for (const p of pcoPeople) { const k = normName(p.name); if (k) pcoByKey.set(k, { pcoId: p.pcoId, name: p.name }); }
   const currentByKey = new Map<string, (typeof current)[number]>();
   for (const m of current) currentByKey.set(normName(m.name), m);
 
+  // Who needs a Planning Center contact lookup: brand-new adds, plus existing matched
+  // members still missing an email or phone (so a re-sync backfills earlier name-only rows).
+  const needContact: { pcoId: string; key: string }[] = [];
+  for (const [key, info] of pcoByKey) {
+    const ex = currentByKey.get(key);
+    if (!ex || !ex.email || !ex.phone) needContact.push({ pcoId: info.pcoId, key });
+  }
+  const contactByKey = new Map<string, { email: string | null; phone: string | null }>();
+  if (needContact.length) {
+    try {
+      const { PcoClient, pcoConfigFromEnv } = await import("@/lib/pco/client");
+      const client = new PcoClient(pcoConfigFromEnv());
+      for (let i = 0; i < needContact.length; i += 6) {
+        const batch = needContact.slice(i, i + 6);
+        const results = await Promise.all(batch.map((n) => client.personContact(n.pcoId)));
+        results.forEach((c, j) => contactByKey.set(batch[j].key, c));
+      }
+    } catch {
+      /* PCO People not available — proceed name-only */
+    }
+  }
+
   let added = 0, removed = 0, kept = 0;
   const toInsert: (typeof teamMembers.$inferInsert)[] = [];
-  for (const [key, name] of pcoByKey) {
+  for (const [key, info] of pcoByKey) {
     const ex = currentByKey.get(key);
-    if (!ex) { toInsert.push({ teamId, name, active: true }); added++; }
-    else { if (!ex.active) await d.update(teamMembers).set({ active: true }).where(eq(teamMembers.id, ex.id)); kept++; }
+    const c = contactByKey.get(key);
+    if (!ex) {
+      toInsert.push({ teamId, name: info.name, active: true, email: c?.email ?? null, phone: c?.phone ?? null });
+      added++;
+    } else {
+      const patch: Record<string, unknown> = {};
+      if (!ex.active) patch.active = true;
+      if (c && !ex.email && c.email) patch.email = c.email;
+      if (c && !ex.phone && c.phone) patch.phone = c.phone;
+      if (Object.keys(patch).length) await d.update(teamMembers).set(patch).where(eq(teamMembers.id, ex.id));
+      kept++;
+    }
   }
   if (toInsert.length) await d.insert(teamMembers).values(toInsert);
   for (const m of current) {
