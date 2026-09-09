@@ -25,6 +25,10 @@ export default async function HomePage() {
   const first = session.name.split(/\s+/)[0] || session.name;
   const isAdmin = session.role === "admin";
   const owner = isOwner(session.email);
+  const nzNow = new Date();
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Pacific/Auckland", hour: "2-digit", hourCycle: "h23" }).format(nzNow));
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const dateLabel = new Intl.DateTimeFormat("en-NZ", { timeZone: "Pacific/Auckland", weekday: "long", day: "numeric", month: "long" }).format(nzNow);
   const [events, perms] = await Promise.all([getUpcomingEvents(), getPerms(session.email, session.role)]);
 
   let stats: { total: number; contactedPct: number; birthdays: number; stillToReach: number } | null = null;
@@ -43,9 +47,10 @@ export default async function HomePage() {
       {/* Welcome */}
       <section className="rise glass-edge relative overflow-hidden rounded-[var(--radius-card)] p-6">
         <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-purple/25 blur-3xl" />
-        <h1 className="relative font-display text-2xl font-bold text-text">Hi {first} 👋</h1>
-        <p className="relative mt-2 text-sm leading-relaxed text-mute text-balance">
-          Thank you for everything you pour into your people. The small, faithful ways you show up — a message, a prayer, remembering a birthday — add up to something far bigger than you see. Here&apos;s your snapshot for today.
+        <p className="relative text-[11px] font-semibold uppercase tracking-[0.2em] text-white/55">{dateLabel}</p>
+        <h1 className="relative mt-2 font-display text-[26px] font-bold leading-tight text-text">{greeting}, {first} 👋</h1>
+        <p className="relative mt-2 max-w-md text-sm leading-relaxed text-mute text-balance">
+          Thank you for showing up for your people — the messages, the prayers, the small moments no one else sees. They matter more than you know.
         </p>
       </section>
 
