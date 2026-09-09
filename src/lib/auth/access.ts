@@ -25,6 +25,7 @@ export function canAccess(role: Role, pathname: string): boolean {
     // Songs Insights is allowed at the proxy for any coach; the page itself further
     // restricts it to coaches on a worship team.
     if (pathname === "/songs-insights") return true;
+    if (pathname === "/notifications") return true;
     if (pathname.startsWith("/api/connect") || pathname.startsWith("/api/contacts")) return true;
     return false;
   }

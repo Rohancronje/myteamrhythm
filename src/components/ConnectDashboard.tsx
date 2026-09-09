@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CoachConnect, ConnectPerson } from "@/lib/data/connect";
 import type { ServeRef, ServeLoad } from "@/lib/data/serving";
+import type { ReminderRow } from "@/lib/data/reminders";
 import { daysFromToday } from "@/lib/time";
 
 export function ConnectDashboard({ data }: { data: CoachConnect }) {
@@ -239,6 +240,12 @@ function relServe(d: string): string {
   return n > 0 ? `in ${n}d` : `${-n}d ago`;
 }
 
+/** Format a reminder's YYYY-MM-DD as "12 Oct" (parsed as a local calendar date). */
+function fmtReminderDate(d: string): string {
+  const [y, m, day] = d.split("-").map(Number);
+  return new Date(y, m - 1, day).toLocaleDateString("en-NZ", { day: "numeric", month: "short" });
+}
+
 /** Trailing 6-week serving load, with a burnout-watch band. High = the person is
  *  serving >=40% of all services held (top ~10% of the roster). */
 function LoadMeter({ load }: { load: ServeLoad }) {
@@ -299,6 +306,15 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
   // is opened rather than for everyone on every Connect page load.
   const [serving, setServing] = useState<{ last: ServeRef | null; next: ServeRef | null; load: ServeLoad | null } | null>(p.serving);
   const [servingState, setServingState] = useState<"idle" | "loading" | "done">(p.serving ? "done" : "idle");
+  // Reminders for significant dates — fetched on demand when the card opens (like
+  // serving info), then managed inline.
+  const [reminders, setReminders] = useState<ReminderRow[]>([]);
+  const [remindersState, setRemindersState] = useState<"idle" | "loading" | "done">("idle");
+  const [showReminderForm, setShowReminderForm] = useState(false);
+  const [rTitle, setRTitle] = useState("");
+  const [rDate, setRDate] = useState("");
+  const [rRecurring, setRRecurring] = useState(true);
+  const [rBusy, setRBusy] = useState(false);
 
   async function toggle() {
     const next = !open;
@@ -312,6 +328,34 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
       } catch { /* leave serving null */ }
       setServingState("done");
     }
+    if (next && remindersState === "idle") {
+      setRemindersState("loading");
+      try {
+        const res = await fetch(`/api/connect/reminders?memberId=${encodeURIComponent(p.id)}`);
+        const data = await res.json();
+        setReminders(data.reminders ?? []);
+      } catch { /* leave reminders empty */ }
+      setRemindersState("done");
+    }
+  }
+
+  async function addReminder() {
+    if (!rTitle.trim() || !rDate) return;
+    setRBusy(true);
+    try {
+      const res = await fetch("/api/connect/reminders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ memberId: p.id, title: rTitle.trim(), remindOn: rDate, recurring: rRecurring }) });
+      const data = await res.json();
+      if (data.ok && data.reminder) {
+        setReminders((rs) => [...rs, data.reminder as ReminderRow].sort((a, b) => a.remindOn.localeCompare(b.remindOn)));
+        setRTitle(""); setRDate(""); setRRecurring(true); setShowReminderForm(false);
+      }
+    } catch { /* ignore */ }
+    setRBusy(false);
+  }
+
+  async function removeReminder(id: string) {
+    setReminders((rs) => rs.filter((r) => r.id !== id)); // optimistic
+    try { await fetch("/api/connect/reminders", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }); } catch { /* ignore */ }
   }
 
   const firstName = p.name.split(" ")[0];
@@ -401,6 +445,7 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
           <div className="flex flex-wrap gap-2">
             {waHref && <a href={waHref} target="_blank" rel="noopener noreferrer" className="rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "#25D366" }}>💬 WhatsApp</a>}
             {p.phone ? <a href={`tel:${p.phone}`} className="rounded-full border border-border bg-surface-solid px-3 py-1.5 text-xs font-semibold text-text">📞 Call</a> : null}
+            {p.phone ? <a href={`sms:${p.phone}?&body=${encodeURIComponent(waMessage)}`} className="rounded-full border border-border bg-surface-solid px-3 py-1.5 text-xs font-semibold text-text">💬 Text</a> : null}
             {p.email ? <a href={`mailto:${p.email}`} className="rounded-full border border-border bg-surface-solid px-3 py-1.5 text-xs font-semibold text-text">✉️ Email</a> : null}
             <button onClick={() => setEditing((e) => !e)} className="rounded-full border border-dashed border-border-strong px-3 py-1.5 text-xs font-semibold text-mute">
               {p.phone || p.email ? "Edit contact" : "Add contact"}
@@ -416,6 +461,47 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
               <button onClick={saveContact} disabled={busy} className="w-full rounded-lg grad-brand py-2 text-xs font-bold text-white disabled:opacity-40">{busy ? "Saving…" : "Save contact"}</button>
             </div>
           )}
+
+          {/* Reminders for significant dates */}
+          <div className="mt-3 rounded-xl border border-border bg-surface-solid p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-mute">🔔 Reminders</p>
+              <button onClick={() => setShowReminderForm((s) => !s)} className="grad-text text-[11px] font-semibold">{showReminderForm ? "Cancel" : "+ Add"}</button>
+            </div>
+
+            {remindersState === "loading" && <p className="mt-2 text-[11px] text-faint">Loading reminders…</p>}
+
+            {reminders.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {reminders.map((r) => (
+                  <li key={r.id} className="flex items-center gap-2 text-xs">
+                    <span className="min-w-0 flex-1 truncate text-text">
+                      <span className="font-semibold">{r.title}</span>
+                      <span className="text-faint"> · {fmtReminderDate(r.remindOn)}{r.recurring ? " · every year" : ""}</span>
+                    </span>
+                    <button onClick={() => removeReminder(r.id)} aria-label={`Delete reminder: ${r.title}`} className="shrink-0 rounded-md px-1.5 py-0.5 text-sm text-faint transition-colors hover:text-text">×</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {remindersState === "done" && reminders.length === 0 && !showReminderForm && (
+              <p className="mt-2 text-[11px] text-faint">No reminders yet. Add a work anniversary, baptism date, or any significant day.</p>
+            )}
+
+            {showReminderForm && (
+              <div className="mt-2 space-y-2">
+                <input value={rTitle} onChange={(e) => setRTitle(e.target.value)} placeholder="What's the occasion? e.g. Work anniversary" maxLength={80} className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-faint" />
+                <input value={rDate} onChange={(e) => setRDate(e.target.value)} type="date" aria-label="Reminder date" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text" />
+                <label className="flex cursor-pointer items-center gap-2 text-[11px] text-mute">
+                  <input type="checkbox" checked={rRecurring} onChange={(e) => setRRecurring(e.target.checked)} style={{ accentColor: "var(--color-purple)" }} />
+                  Repeat every year
+                </label>
+                <button onClick={addReminder} disabled={rBusy || !rTitle.trim() || !rDate} className="w-full rounded-lg grad-brand py-2 text-xs font-bold text-white disabled:opacity-40">{rBusy ? "Saving…" : "Add reminder"}</button>
+                <p className="text-[10px] text-faint">On the day, we&apos;ll email you and add an in-app notification.</p>
+              </div>
+            )}
+          </div>
 
           {/* Last FYI note */}
           {p.lastNote && (

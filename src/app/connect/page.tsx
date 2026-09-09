@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
 import { AccountChip } from "@/components/AccountChip";
+import { NotificationBell } from "@/components/NotificationBell";
 import { ConnectDashboard } from "@/components/ConnectDashboard";
 import { getSession } from "@/lib/auth/server";
 import { getUserTeams } from "@/lib/auth/users";
@@ -39,7 +40,10 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
             {showAll ? "Connect · whole church" : `Connect · ${data.teams.join(" · ") || "no team assigned"}`}
           </p>
         </div>
-        <AccountChip />
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <AccountChip />
+        </div>
       </header>
 
       {isAdmin && (

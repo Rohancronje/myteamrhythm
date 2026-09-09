@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
 import { AppNav } from "@/components/AppNav";
 import { AccountChip } from "@/components/AccountChip";
+import { NotificationBell } from "@/components/NotificationBell";
 import { getSession } from "@/lib/auth/server";
 import { getUserTeams } from "@/lib/auth/users";
 import { getAllTeamIds } from "@/lib/data/teams-admin";
@@ -41,7 +42,10 @@ export default async function HomePage() {
     <main className="mx-auto min-h-full w-full max-w-xl px-5 pb-28 pt-6 lg:max-w-none lg:px-10 lg:pb-12 2xl:max-w-5xl">
       <header className="rise mb-6 flex items-center justify-between">
         <Wordmark />
-        <AccountChip />
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <AccountChip />
+        </div>
       </header>
 
       {/* Welcome */}

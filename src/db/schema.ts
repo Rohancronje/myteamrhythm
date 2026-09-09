@@ -305,6 +305,43 @@ export const songTags = pgTable("song_tags", {
   notes: text("notes"),
 });
 
+/** A coach's reminder for a significant date on a volunteer (work anniversary,
+ *  baptism, etc.). Fires the morning of the date — emails AND in-app-notifies the
+ *  coach who created it. `recurring` repeats every year (month+day match); one-off
+ *  otherwise. `lastFiredOn` is the last NZ date it fired, so the cron never
+ *  double-sends. memberId points at the team_members row (the contact). */
+export const reminders = pgTable(
+  "reminders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memberId: uuid("member_id").notNull().references(() => teamMembers.id, { onDelete: "cascade" }),
+    coachEmail: text("coach_email").notNull(), // creator + recipient of email/notification
+    title: text("title").notNull(),
+    remindOn: date("remind_on").notNull(), // YYYY-MM-DD — the significant date
+    recurring: boolean("recurring").notNull().default(false), // repeat every year
+    lastFiredOn: date("last_fired_on"), // NZ date it last fired (dedupe within a day)
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("reminders_member_idx").on(t.memberId), index("reminders_coach_idx").on(t.coachEmail)],
+);
+
+/** In-app notifications, one row per recipient. Produced by the reminder cron;
+ *  `readAt` stays null until the recipient opens their notifications. */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userEmail: text("user_email").notNull(), // recipient
+    kind: text("kind").notNull().default("reminder"),
+    title: text("title").notNull(),
+    body: text("body"),
+    href: text("href"),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("notifications_user_idx").on(t.userEmail, t.readAt)],
+);
+
 /** Pastoral follow-up state per person — deliberately structured, NOT free-text.
  *  Records only *that* someone was contacted and the broad outcome, so care is
  *  tracked without keeping written notes about a volunteer. One current row per

@@ -235,6 +235,48 @@ export function birthdayReminderEmail(opts: {
   return { subject, html };
 }
 
+/** Morning reminder to the coach who created it: a significant date for one of
+ *  their volunteers has arrived (work anniversary, baptism, etc.). */
+export function reminderEmail(opts: {
+  coachName: string;
+  memberName: string;
+  title: string;
+  team?: string;
+}): { subject: string; html: string } {
+  const first = opts.coachName.split(/\s+/)[0] || opts.coachName;
+  const url = appUrl();
+  const logo = `${url}/logo.jpg`;
+  const subject = `🔔 ${opts.title} — ${opts.memberName}`;
+  const teamLine = opts.team ? `<span style="font-size:13px;color:#948da8;"> &middot; ${opts.team}</span>` : "";
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"></head>
+<body style="margin:0;padding:0;background:#ecebf2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171426;-webkit-font-smoothing:antialiased;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${opts.title} for ${opts.memberName} is today — a reminder you set.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ecebf2;padding:32px 12px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 20px 48px rgba(23,16,44,.14);border:1px solid #e6e4ef;">
+<tr><td style="background:#0a0912;padding:34px 32px 30px;text-align:center;">
+<img src="${logo}" width="220" alt="Rhythm — Church Volunteer Platform" style="display:inline-block;width:220px;max-width:70%;height:auto;border:0;outline:none;text-decoration:none;">
+</td></tr>
+<tr><td style="height:5px;background:linear-gradient(90deg,#8b6cff,#c06cff,#ff5c8a);font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="padding:34px 38px 8px;">
+<p style="font-size:17px;font-weight:600;margin:0 0 8px;color:#171426;">Morning ${first}! 🔔</p>
+<p style="font-size:15px;line-height:1.65;margin:0 0 22px;color:#2c2740;">Here&rsquo;s a reminder you set — today&rsquo;s the day. A quick message would mean a lot:</p>
+<div style="border:1px solid #eae7f4;background:#f7f6fc;border-radius:16px;padding:16px 20px;margin:0 0 24px;">
+<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8b6cff;margin:0 0 6px;">${opts.title}</p>
+<p style="font-size:16px;font-weight:700;margin:0;color:#171426;">${opts.memberName}${teamLine}</p>
+</div>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 26px;"><tr><td align="center" style="border-radius:999px;background:linear-gradient(135deg,#8b6cff,#ff5c8a);box-shadow:0 10px 24px rgba(139,108,255,.4);">
+<a href="${url}/connect" style="display:inline-block;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 40px;border-radius:999px;">Open Connect &nbsp;&rarr;</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:22px 38px 30px;border-top:1px solid #f0eef6;">
+<div style="font-size:11px;line-height:1.6;color:#aba6bb;text-align:center;">Rhythm &mdash; a volunteer connection platform for churches.</div>
+</td></tr>
+</table>
+<div style="max-width:560px;font-size:11px;color:#b4b0c2;padding:16px 8px 0;text-align:center;">Sent by Rhythm &middot; myteamrhythm.online</div>
+</td></tr></table></body></html>`;
+  return { subject, html };
+}
+
 /** Sent to a person when an admin resets their password. */
 export function passwordResetEmail(opts: {
   name: string;
