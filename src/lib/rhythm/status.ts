@@ -10,7 +10,7 @@ export const STATUS_META: Record<
   steady: {
     label: "Healthy",
     color: "var(--color-mint)",
-    ring: "linear-gradient(135deg, #38dd9b 0%, #5cc2ff 100%)",
+    ring: "linear-gradient(135deg, #34d399 0%, #5cc2ff 100%)",
     soft: "color-mix(in srgb, var(--color-mint) 16%, transparent)",
   },
   watch: {

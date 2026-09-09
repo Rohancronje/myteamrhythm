@@ -125,10 +125,10 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
             instead of a new face back-filling the list. */}
         {data.doneToday.length > 0 && (
           <div className="mt-3.5 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "#38dd9b" }}>Reached today</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "#34d399" }}>Reached today</span>
             {data.doneToday.map((p) => (
               <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-solid px-2.5 py-1 text-xs text-text">
-                <span style={{ color: "#38dd9b" }}>✓</span>{p.name.split(" ")[0]}
+                <span style={{ color: "#34d399" }}>✓</span>{p.name.split(" ")[0]}
                 {!p.lastContactedByYou && p.lastContactedBy ? <span className="text-faint">· {p.lastContactedBy.split(" ")[0]}</span> : null}
               </span>
             ))}
@@ -200,7 +200,7 @@ function LoadMeter({ load }: { load: ServeLoad }) {
       ? { label: "High load", color: "#ff6b6b" }
       : load.band === "busy"
         ? { label: "Busy", color: "#ffb454" }
-        : { label: "Healthy", color: "#38dd9b" };
+        : { label: "Healthy", color: "#34d399" };
   return (
     <div className="mb-3 rounded-xl border border-border bg-surface-solid p-3">
       <div className="flex items-center justify-between gap-2">
@@ -310,7 +310,7 @@ function ConnectCard({ p, highlight }: { p: ConnectPerson; highlight?: boolean }
               p.lastContactedByYou ? (
                 <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-faint">by you</span>
               ) : (
-                <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(56,221,155,0.14)", color: "#38dd9b" }}>✓ {p.lastContactedBy.split(" ")[0]}</span>
+                <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: "rgba(52,211,153,0.14)", color: "#34d399" }}>✓ {p.lastContactedBy.split(" ")[0]}</span>
               )
             )}
           </span>

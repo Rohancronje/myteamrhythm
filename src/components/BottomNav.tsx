@@ -62,7 +62,7 @@ export function BottomNav({ items, user, attention }: { items: NavItem[]; user?:
               </>
             ) : (
               <span className="flex items-center gap-2.5">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(56,221,155,0.16)", color: "#38dd9b" }}>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ background: "rgba(52,211,153,0.16)", color: "#34d399" }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4.5 4.5L19 7" /></svg>
                 </span>
                 <span className="text-[12px] font-medium text-mute">All caught up</span>
@@ -97,7 +97,7 @@ export function BottomNav({ items, user, attention }: { items: NavItem[]; user?:
 
 function Icon({ name, active }: { name: NavItem["icon"]; active: boolean }) {
   const stroke = active
-    ? { home: "url(#g1)", teams: "#ff5c8a", songs: "#8b6cff", check: "#38dd9b", insights: "#5cc2ff", me: "url(#g1)", next: "#ffb454", today: "#38dd9b", connect: "url(#g1)", birthday: "#ff5c8a", resources: "#5cc2ff" }[name]
+    ? { home: "url(#g1)", teams: "#ff5c8a", songs: "#8b6cff", check: "#34d399", insights: "#5cc2ff", me: "url(#g1)", next: "#ffb454", today: "#34d399", connect: "url(#g1)", birthday: "#ff5c8a", resources: "#5cc2ff" }[name]
     : "currentColor";
   const common = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none" as const };
   switch (name) {

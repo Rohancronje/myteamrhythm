@@ -25,7 +25,7 @@
 
   --color-purple: #8b6cff;
   --color-pink: #ff5c8a;
-  --color-mint: #38dd9b;
+  --color-mint: #34d399;
   --color-amber: #ffb454;
   --color-blue: #5cc2ff;
   --color-danger: #f4425c; /* risk signal, distinct from brand pink */
@@ -57,7 +57,7 @@
     background:
       radial-gradient(38% 34% at 82% 6%, rgba(139, 108, 255, 0.42), transparent 62%),
       radial-gradient(34% 30% at 8% 14%, rgba(255, 92, 138, 0.32), transparent 60%),
-      radial-gradient(42% 38% at 62% 88%, rgba(56, 221, 155, 0.16), transparent 66%),
+      radial-gradient(42% 38% at 62% 88%, rgba(52, 211, 153, 0.16), transparent 66%),
       radial-gradient(30% 26% at 22% 72%, rgba(92, 194, 255, 0.16), transparent 60%);
     filter: saturate(1.2);
     animation: aurora 26s ease-in-out infinite alternate;
@@ -123,7 +123,7 @@
     background-image: linear-gradient(135deg, #8b6cff 0%, #ff5c8a 100%);
   }
   .grad-mint {
-    background-image: linear-gradient(135deg, #38dd9b 0%, #5cc2ff 100%);
+    background-image: linear-gradient(135deg, #34d399 0%, #5cc2ff 100%);
   }
   .grad-text {
     background-image: linear-gradient(120deg, #a58bff 0%, #ff7aa0 60%, #ffb454 100%);
@@ -164,7 +164,7 @@
 
   /* Conic shimmer ring for story avatars. */
   .ring-shimmer {
-    background: conic-gradient(from var(--a, 0deg), #8b6cff, #ff5c8a, #ffb454, #38dd9b, #8b6cff);
+    background: conic-gradient(from var(--a, 0deg), #8b6cff, #ff5c8a, #ffb454, #34d399, #8b6cff);
     animation: spin 6s linear infinite;
   }
 

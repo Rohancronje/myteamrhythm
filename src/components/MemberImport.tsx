@@ -122,7 +122,7 @@ export function MemberImport({ teamId }: { teamId: string }) {
       {fileName && !done && <p className="mt-3 text-xs text-faint">{fileName}{rows.length ? ` · ${rows.length} volunteers found` : ""}</p>}
       {err && <p className="mt-3 text-xs text-danger">{err}</p>}
       {done !== null && doneDetail && (
-        <p className="mt-3 text-xs font-semibold" style={{ color: "#38dd9b" }}>
+        <p className="mt-3 text-xs font-semibold" style={{ color: "#34d399" }}>
           ✓ {doneDetail.added} added{doneDetail.updated > 0 ? `, ${doneDetail.updated} updated` : ""}.
         </p>
       )}
