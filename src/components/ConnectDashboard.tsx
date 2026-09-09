@@ -15,8 +15,11 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
   // Everyone else — including people already reached today or earlier this month —
   // stays in the list below so they remain tappable to open their card.
   const [query, setQuery] = useState("");
+  const [showContacted, setShowContacted] = useState(false);
   const todayIds = new Set(data.today.map((p) => p.id));
   const rest = data.people.filter((p) => !todayIds.has(p.id));
+  const toReach = rest.filter((p) => !p.contactedThisCycle);
+  const contacted = rest.filter((p) => p.contactedThisCycle);
   const q = query.trim().toLowerCase();
   const results = q ? data.people.filter((p) => p.name.toLowerCase().includes(q)) : [];
   return (
@@ -136,13 +139,37 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
         )}
       </section>
 
-      {/* Everyone else */}
-      {rest.length > 0 && (
+      {/* Still to reach — everyone not yet contacted this month */}
+      {toReach.length > 0 && (
         <section className="rise" style={{ animationDelay: "120ms" }}>
-          <h2 className="mb-3.5 text-sm font-medium text-mute">Your team · {data.total}</h2>
-          <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-            {rest.map((p) => <ConnectCard key={p.id} p={p} />)}
+          <div className="mb-3.5 flex items-baseline justify-between">
+            <h2 className="text-sm font-medium text-mute">Still to reach</h2>
+            <span className="text-xs text-faint">{toReach.length}</span>
           </div>
+          <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+            {toReach.map((p) => <ConnectCard key={p.id} p={p} />)}
+          </div>
+        </section>
+      )}
+
+      {/* Contacted this month — collapsed by default so the list stays short */}
+      {contacted.length > 0 && (
+        <section className="rise" style={{ animationDelay: "150ms" }}>
+          <button
+            onClick={() => setShowContacted((s) => !s)}
+            className="flex w-full items-center justify-between rounded-xl py-1 text-left"
+          >
+            <span className="flex items-center gap-2 text-sm font-medium text-mute">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full text-[11px]" style={{ background: "rgba(52,211,153,0.16)", color: "#34d399" }}>✓</span>
+              Contacted this month
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-faint">{contacted.length}<span className="text-[10px]">{showContacted ? "▲" : "▼"}</span></span>
+          </button>
+          {showContacted && (
+            <div className="mt-3.5 grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+              {contacted.map((p) => <ConnectCard key={p.id} p={p} />)}
+            </div>
+          )}
         </section>
       )}
       </>
