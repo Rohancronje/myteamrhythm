@@ -35,7 +35,7 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
         <section className="rise">
           <div className="mb-3.5 flex items-baseline justify-between">
             <h2 className="text-sm font-medium text-mute">{results.length} {results.length === 1 ? "match" : "matches"}</h2>
-            <button onClick={() => setQuery("")} className="text-xs text-faint transition-colors hover:text-text">Clear</button>
+            <button onClick={() => setQuery("")} className="-my-1 rounded-lg px-2.5 py-1.5 text-xs text-faint transition-colors hover:text-text">Clear</button>
           </div>
           {results.length === 0 ? (
             <div className="glass rounded-[var(--radius-card)] p-6 text-center text-sm text-mute">No one on your team matches &ldquo;{query.trim()}&rdquo;.</div>

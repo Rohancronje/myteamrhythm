@@ -113,7 +113,7 @@ export function CoachManager({ coaches, candidates }: { coaches: Coach[]; candid
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="font-display text-lg font-bold grad-text">{c.contactedPct}%</span>
-                  <button onClick={() => remove(c.email, c.name)} disabled={busy} className="rounded-lg px-2 py-1 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>
+                  <button onClick={() => remove(c.email, c.name)} disabled={busy} className="rounded-lg px-3 py-2 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">

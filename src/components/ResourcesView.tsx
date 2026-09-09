@@ -106,7 +106,7 @@ function ResourceCard({ r, canPost, onRemove, onRefresh }: { r: ResourceItem; ca
           {r.detail && <p className="mt-1.5 text-sm text-mute">{r.detail}</p>}
           <p className="mt-1 text-[11px] text-faint">Added by {r.addedByName ?? "someone"}</p>
         </div>
-        {canPost && <button onClick={onRemove} className="shrink-0 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>}
+        {canPost && <button onClick={onRemove} className="-my-1 shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>}
       </div>
 
       <a href={r.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block rounded-full border border-border bg-surface-solid px-4 py-2 text-xs font-semibold text-text transition-colors hover:border-purple">

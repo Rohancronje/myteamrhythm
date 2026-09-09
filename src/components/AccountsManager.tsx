@@ -199,10 +199,10 @@ function AccountRow({ u }: { u: Account }) {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ color: meta.color, background: `color-mix(in srgb, ${meta.color} 16%, transparent)` }}>{meta.label}</span>
-          <button onClick={() => { setOpen((o) => !o); setMsg(null); }} className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-mute">
+          <button onClick={() => { setOpen((o) => !o); setMsg(null); }} className="rounded-full border border-border px-3.5 py-2 text-xs font-semibold text-mute">
             {open ? "Cancel" : "Manage"}
           </button>
-          <button onClick={remove} disabled={busy} className="rounded-full px-2.5 py-1 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>
+          <button onClick={remove} disabled={busy} className="rounded-full px-3 py-2 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>
         </div>
       </div>
 

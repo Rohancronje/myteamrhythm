@@ -246,8 +246,8 @@ function MemberLine({ m }: { m: MemberRow }) {
           {m.birthday ? ` · 🎂 ${formatBirthday(m.birthday)}` : ""}
         </p>
       </div>
-      <button onClick={() => setEditing(true)} className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-mute transition-colors hover:text-text">Edit</button>
-      <button onClick={remove} disabled={busy} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>
+      <button onClick={() => setEditing(true)} className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-mute transition-colors hover:text-text">Edit</button>
+      <button onClick={remove} disabled={busy} className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>
     </li>
   );
 }

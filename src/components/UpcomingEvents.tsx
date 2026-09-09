@@ -66,7 +66,7 @@ export function UpcomingEvents({ events, canPost }: { events: EventItem[]; canPo
                   {e.location && <p className="mt-0.5 text-xs text-mute">📍 {e.location}</p>}
                   {e.detail && <p className="mt-1.5 text-xs text-mute">{e.detail}</p>}
                 </div>
-                {canPost && <button onClick={() => remove(e.id)} className="shrink-0 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>}
+                {canPost && <button onClick={() => remove(e.id)} className="-my-1 shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-danger transition-opacity hover:opacity-80">Remove</button>}
               </div>
             </div>
           ))}
