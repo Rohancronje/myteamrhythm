@@ -89,6 +89,26 @@ export function ConnectDashboard({ data }: { data: CoachConnect }) {
         <StatTile label="Still to reach" value={`${data.people.filter((p) => p.due).length}`} sub="this month" />
       </section>
 
+      {/* Top servers this year */}
+      {data.topServers.length > 0 && (
+        <section className="rise overflow-hidden rounded-[var(--radius-card)] p-5" style={{ animationDelay: "50ms", background: "linear-gradient(135deg, rgba(255,180,84,0.13), rgba(139,108,255,0.10))", border: "1px solid rgba(255,180,84,0.28)" }}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: "#ffb454" }}>🏆 Top servers this year</p>
+          <div className="mt-3 space-y-2.5">
+            {data.topServers.map((s, i) => {
+              const medal = ["#ffd15c", "#ccd2dd", "#e2a86a"][i] ?? "#ccd2dd";
+              return (
+                <div key={s.name} className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-[#1a1420]" style={{ background: medal }}>{i + 1}</span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-solid font-display text-[11px] font-bold text-text">{s.initials}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text">{s.name}</span>
+                  <span className="shrink-0 text-sm text-mute"><span className="font-display font-bold text-text">{s.serves}</span> {s.serves === 1 ? "service" : "services"}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Birthdays soon */}
       {data.birthdaysSoon.length > 0 && (
         <section className="rise overflow-hidden rounded-[var(--radius-card)] p-5" style={{ animationDelay: "40ms", background: "linear-gradient(135deg, rgba(92,194,255,0.14), rgba(139,108,255,0.10))", border: "1px solid rgba(92,194,255,0.28)" }}>

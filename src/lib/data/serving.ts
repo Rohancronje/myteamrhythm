@@ -89,6 +89,51 @@ export interface ServingIndex {
   load6w(pcoId: string, today: string): ServeLoad | null;
 }
 
+export interface TopServer {
+  pcoId: string;
+  name: string; // the member name we matched on (as it appears on the roster)
+  serves: number; // distinct confirmed services served, year-to-date
+}
+
+/** The top `limit` servers (by confirmed services this calendar year, up to `today`)
+ *  among the given member names. Name-matched conservatively — a name that resolves
+ *  to zero or several PCO people is skipped — and anyone with no serves is dropped.
+ *  Returns [] when no PCO data is available. */
+export async function getTopServers(names: string[], today: string, limit = 3): Promise<TopServer[]> {
+  const people = await loadPeopleCached();
+  if (people.length === 0) return [];
+
+  const byName = new Map<string, Set<string>>();
+  const byId = new Map<string, PcoPerson>();
+  for (const p of people) {
+    byId.set(p.pcoId, p);
+    for (const v of normVariants(p.name)) {
+      const s = byName.get(v) ?? new Set<string>();
+      s.add(p.pcoId);
+      byName.set(v, s);
+    }
+  }
+
+  const yearStart = `${today.slice(0, 4)}-01-01`;
+  const seen = new Set<string>();
+  const out: TopServer[] = [];
+  for (const name of names) {
+    const hits = new Set<string>();
+    for (const v of normVariants(name)) for (const id of byName.get(v) ?? []) hits.add(id);
+    if (hits.size !== 1) continue; // unmatched or ambiguous — skip
+    const pcoId = [...hits][0];
+    if (seen.has(pcoId)) continue;
+    seen.add(pcoId);
+    const p = byId.get(pcoId)!;
+    const set = new Set<string>();
+    for (const e of p.events) {
+      if (e.status === "confirmed" && e.date >= yearStart && e.date <= today) set.add(`${e.date}|${e.serviceType}`);
+    }
+    if (set.size > 0) out.push({ pcoId, name, serves: set.size });
+  }
+  return out.sort((a, b) => b.serves - a.serves || a.name.localeCompare(b.name)).slice(0, limit);
+}
+
 /** Build the serving index once (name→person, last serve, next serve). Returns an
  *  empty index (everything null) when no PCO data is available, so callers degrade
  *  gracefully. */

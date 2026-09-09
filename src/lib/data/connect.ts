@@ -51,6 +51,7 @@ export interface CoachConnect {
   doneToday: ConnectPerson[]; // reached today — shown as completed, not back-filled
   birthdaysSoon: ConnectPerson[];
   people: ConnectPerson[];
+  topServers: { name: string; initials: string; serves: number }[]; // most services this year (PCO)
 }
 
 interface ConnRow {
@@ -147,7 +148,7 @@ async function loadCoachNames(emails: string[]): Promise<Map<string, string>> {
  *  on the team, and never the admin. */
 export async function getCoachConnect(teamIds: string[] | undefined, now: Date, viewerEmail?: string): Promise<CoachConnect> {
   const ids = [...new Set((teamIds ?? []).filter(Boolean))];
-  const empty: CoachConnect = { teamIds: ids, teams: [], total: 0, contactedCount: 0, contactedPct: 0, contactedByYouCount: 0, coachCount: 0, dailyTarget: 1, today: [], doneToday: [], birthdaysSoon: [], people: [] };
+  const empty: CoachConnect = { teamIds: ids, teams: [], total: 0, contactedCount: 0, contactedPct: 0, contactedByYouCount: 0, coachCount: 0, dailyTarget: 1, today: [], doneToday: [], birthdaysSoon: [], people: [], topServers: [] };
   if (!process.env.DATABASE_URL || ids.length === 0) return empty;
 
   const { getDb } = await import("@/db");
@@ -249,5 +250,16 @@ export async function getCoachConnect(teamIds: string[] | undefined, now: Date, 
   // Full roster: due first, then by soonest-due.
   people.sort((a, b) => Number(b.due) - Number(a.due) || (b.daysSince ?? 1e9) - (a.daysSince ?? 1e9) || a.name.localeCompare(b.name));
 
-  return { teamIds: ids, teams: teamRows.map((t) => t.name), total, contactedCount, contactedPct, contactedByYouCount, coachCount, dailyTarget, today, doneToday, birthdaysSoon, people };
+  // Top servers this year (from Planning Center). Cheap — reads the cached roster
+  // snapshot and counts confirmed services; empty when PCO data isn't available.
+  let topServers: CoachConnect["topServers"] = [];
+  try {
+    const { getTopServers } = await import("./serving");
+    const top = await getTopServers(roster.map((m) => m.name), todayISO, 3);
+    topServers = top.map((t) => ({ name: t.name, initials: initials(t.name), serves: t.serves }));
+  } catch {
+    /* PCO data unavailable — leave empty */
+  }
+
+  return { teamIds: ids, teams: teamRows.map((t) => t.name), total, contactedCount, contactedPct, contactedByYouCount, coachCount, dailyTarget, today, doneToday, birthdaysSoon, people, topServers };
 }
